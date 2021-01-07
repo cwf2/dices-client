@@ -8,7 +8,7 @@ idna==2.10
 isodate==0.6.0
 kiwisolver==1.2.0
 LinkHeader==0.4.3
-lxml==4.5.2
+lxml==4.6.2
 matplotlib==3.3.0
 MyCapytain==3.0.2
 numpy==1.19.1

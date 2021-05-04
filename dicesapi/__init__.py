@@ -1,6 +1,4 @@
 import requests
-import ipywidgets as widgets
-from IPython.display import display
 from MyCapytain.resolvers.cts.api import HttpCtsResolver
 from MyCapytain.retrievers.cts5 import HttpCtsRetriever
 
@@ -295,6 +293,7 @@ class DicesAPI(object):
         self.API = dices_api
         self.CTS_API = cts_api
         self.resolver = HttpCtsResolver(HttpCtsRetriever(self.CTS_API))
+        self._ProgressClass = None
         self._work_index = {}
         self._author_index = {}
         self._character_index = {}
@@ -303,7 +302,7 @@ class DicesAPI(object):
         self._speechcluster_index = {}
     
 
-    def getPagedJSON(self, endpoint, params=None, output=None):
+    def getPagedJSON(self, endpoint, params=None, progress=False):
         '''Collect paged results from the API'''
         
         # tidy slashes
@@ -325,17 +324,10 @@ class DicesAPI(object):
         results = data['results']
         
         # create a progress bar
-        pbar = widgets.IntProgress(
-            value = len(results),
-            min = 0,
-            max = count,
-            bar_style='info',
-            orientation='horizontal'
-        )
-        pbar_label = widgets.Label(value = f'{len(results)}/{count}')
-        
-        if output is not None:
-            output.children = [pbar, pbar_label]
+        pbar = None
+        if progress:
+            if self._ProgressClass is not None:
+                pbar = self._ProgressClass(max=count)
         
         # check for more pages
         while data['next']:
@@ -345,8 +337,8 @@ class DicesAPI(object):
             else:
                 res.raise_for_status()
             results.extend(data['results'])
-            pbar.value = len(results)
-            pbar_label.value = f'{len(results)}/{count}'
+            if pbar is not None:
+                pbar.update(len(results))
 
         # check that we got everything
         if len(results) != count:
@@ -357,16 +349,9 @@ class DicesAPI(object):
         
     def getSpeeches(self, progress=False, **kwargs):
         '''Retrieve speeches from API'''
-        
-        # output
-        if progress:
-            output = widgets.HBox()
-            display(output)
-        else:
-            output = None
-        
+                
         # get the results from the speeches endpoint
-        results = self.getPagedJSON('speeches', dict(**kwargs), output)
+        results = self.getPagedJSON('speeches', dict(**kwargs), progress=progress)
         
         # convert to Speech objects
         speeches = [self.indexedSpeech(s) for s in results]
@@ -374,15 +359,11 @@ class DicesAPI(object):
         return speeches
 
 
-    def getClusters(self, **kwargs):
+    def getClusters(self, progress=False, **kwargs):
         '''Retrieve speech clusters from API'''
-        
-        # output
-        output = widgets.HBox()
-        display(output)
-        
+                
         # get the results from the speeches endpoint
-        results = self.getPagedJSON('clusters', dict(**kwargs), output)
+        results = self.getPagedJSON('clusters', dict(**kwargs), progress=progress)
         
         # convert to Speech objects
         clusters = [self.indexedSpeechCluster(s) for s in results]
@@ -393,15 +374,8 @@ class DicesAPI(object):
     def getCharacters(self, progress=False, **kwargs):
         '''Retrieve speeches from API'''
         
-        # output
-        if progress:
-            output = widgets.HBox()
-            display(output)
-        else:
-            output = None
-        
         # get the results from the speeches endpoint
-        results = self.getPagedJSON('characters', dict(**kwargs), output)
+        results = self.getPagedJSON('characters', dict(**kwargs), progress=progress)
         
         # convert to Character objects
         characters = [Character(c) for c in results]

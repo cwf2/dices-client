@@ -349,7 +349,7 @@ class DicesAPI(object):
         
     def getSpeeches(self, progress=False, **kwargs):
         '''Retrieve speeches from API'''
-                
+            
         # get the results from the speeches endpoint
         results = self.getPagedJSON('speeches', dict(**kwargs), progress=progress)
         
@@ -362,25 +362,47 @@ class DicesAPI(object):
     def getClusters(self, progress=False, **kwargs):
         '''Retrieve speech clusters from API'''
                 
-        # get the results from the speeches endpoint
+        # get the results from the clusters endpoint
         results = self.getPagedJSON('clusters', dict(**kwargs), progress=progress)
         
-        # convert to Speech objects
+        # convert to Clusters objects
         clusters = [self.indexedSpeechCluster(s) for s in results]
         
         return clusters
 
     
     def getCharacters(self, progress=False, **kwargs):
-        '''Retrieve speeches from API'''
+        '''Retrieve characters from API'''
         
-        # get the results from the speeches endpoint
+        # get the results from the characters endpoint
         results = self.getPagedJSON('characters', dict(**kwargs), progress=progress)
         
         # convert to Character objects
         characters = [Character(c) for c in results]
         
         return characters
+
+    def getWorks(self, progress=False, **kwargs):
+        '''Fetch works from the API'''
+        results = self.getPagedJSON('works', dict(**kwargs), progress=progress)
+
+        works = [self.indexedWork(w) for w in results]
+        return works
+
+    def getAuthors(self, progress=False, **kwargs):
+        '''Fetch authors from the API'''
+        results = self.getPagedJSON('authors', dict(**kwargs), progress=progress)
+
+        authors = [self.indexedAuthor(a) for a in results]
+        return authors
+
+    def getInstances(self, progress=False, **kwargs):
+        '''Fetch character instances from the API'''
+        results = self.getPagedJSON('instances', dict(**kwargs), progress=progress)
+
+        instances = [self.indexedCharacterInstance(i) for i in results]
+        return instances
+        
     
 
     def indexedAuthor(self, data):

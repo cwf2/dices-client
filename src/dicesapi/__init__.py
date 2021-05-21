@@ -13,6 +13,27 @@ class _DataGroup(object):
                 newlist.append(thing)
         return self.__init__(newlist)
     
+    def filterList(self, attribute, filterList):
+        newlist = []
+        for thing in self._things:
+            if(thing._attributes[attribute] in filterList and thing._attributes[attribute] is not None):
+                newlist.append(thing)
+        return self.__init__(newlist)
+    
+    def deepFilter(self, attributes, value):
+        newlist = []
+        for thing in self._things:
+            filterList = thing._attributes
+            success = True
+            for attr in attributes:
+                if(attr not in filterList):
+                    success = False
+                    break
+                filterList=filterList[attr]
+            if(success and filterList == value):
+                newlist.append(thing)
+        return self.__init__(newlist)
+            
     @property
     def list(self):
         return [x for x in self._things]
@@ -32,6 +53,34 @@ class _AuthorGroup(_DataGroup):
     
     def getUrns(self):
         return [x.urn for x in self._things]
+
+    def filterNames(self, names, incl_none=False):
+        newlist = []
+        for thing in self._things:
+            if(thing.name in names and (thing is not None or (thing is None and incl_none))):
+                newlist.append(thing)
+        return _AuthorGroup(newlist)
+    
+    def filterIDs(self, ids, incl_none=False):
+        newlist = []
+        for thing in self._things:
+            if(thing.id in ids and (thing is not None or (thing is None and incl_none))):
+                newlist.append(thing)
+        return _AuthorGroup(newlist)
+
+    def filterWDs(self, wds, incl_none=False):
+        newlist = []
+        for thing in self._things:
+            if(thing.wd in wds and (thing is not None or (thing is None and incl_none))):
+                newlist.append(thing)
+        return _AuthorGroup(newlist)
+
+    def filterUrns(self, urns, incl_none=False):
+        newlist = []
+        for thing in self._things:
+            if(thing.urn in urns and (thing is not None or (thing is None and incl_none))):
+                newlist.append(thing)
+        return _AuthorGroup(newlist)
 
 class Author(object):
     '''An ancient author'''
@@ -80,6 +129,41 @@ class _WorkGroup(_DataGroup):
     def getAuthors(self):
         return [x.author for x in self._things]
 
+    def filterIDs(self, ids, incl_none=False):
+        newlist = []
+        for thing in self._things:
+            if(thing.id in ids and (thing is not None or (thing is None and incl_none))):
+                newlist.append(thing)
+        return _WorkGroup(newlist)
+
+    def filterTitles(self, titles, incl_none=False):
+        newlist = []
+        for thing in self._things:
+            if(thing.title in titles and (thing is not None or (thing is None and incl_none))):
+                newlist.append(thing)
+        return _WorkGroup(newlist)
+
+    def filterWDs(self, wds, incl_none=False):
+        newlist = []
+        for thing in self._things:
+            if(thing.wd in wds and (thing is not None or (thing is None and incl_none))):
+                newlist.append(thing)
+        return _WorkGroup(newlist)
+
+    def filterUrns(self, urns, incl_none=False):
+        newlist = []
+        for thing in self._things:
+            if(thing.urn in urns and (thing is not None or (thing is None and incl_none))):
+                newlist.append(thing)
+        return _WorkGroup(newlist)
+
+    def filterAuthors(self, authors, incl_none=False):
+        newlist = []
+        for thing in self._things:
+            if(thing.author in authors and (thing is not None or (thing is None and incl_none))):
+                newlist.append(thing)
+        return _WorkGroup(newlist)
+
 class Work(object):
     '''An epic poem'''
     
@@ -113,7 +197,7 @@ class Work(object):
                 self.author = self.api.indexedAuthor(data['author'])
             else:
                 self.author = Author(data['author'], api=self.api)
-            del data['author']
+            data['author'] = self.author
 
 class _CharacterGroup(_DataGroup):
     def __init__(self, things=None):
@@ -139,6 +223,55 @@ class _CharacterGroup(_DataGroup):
     
     def getGenders(self):
         return [x.gender for x in self._things]
+
+    def filterIDs(self, ids, incl_none=False):
+        newlist = []
+        for thing in self._things:
+            if(thing.id in ids and (thing is not None or (thing is None and incl_none))):
+                newlist.append(thing)
+        return _CharacterGroup(newlist)
+
+    def filterNames(self, names, incl_none=False):
+        newlist = []
+        for thing in self._things:
+            if(thing.name in names and (thing is not None or (thing is None and incl_none))):
+                newlist.append(thing)
+        return _CharacterGroup(newlist)
+
+    def filterBeings(self, beings, incl_none=False):
+        newlist = []
+        for thing in self._things:
+            if(thing.being in beings and (thing is not None or (thing is None and incl_none))):
+                newlist.append(thing)
+        return _CharacterGroup(newlist)
+
+    def filterTypes(self, types, incl_none=False):
+        newlist = []
+        for thing in self._things:
+            if(thing.type in types and (thing is not None or (thing is None and incl_none))):
+                newlist.append(thing)
+        return _CharacterGroup(newlist)
+
+    def filterWDs(self, wds, incl_none=False):
+        newlist = []
+        for thing in self._things:
+            if(thing.wd in wds and (thing is not None or (thing is None and incl_none))):
+                newlist.append(thing)
+        return _CharacterGroup(newlist)
+
+    def filterMantos(self, mantos, incl_none=False):
+        newlist = []
+        for thing in self._things:
+            if(thing.manto in mantos and (thing is not None or (thing is None and incl_none))):
+                newlist.append(thing)
+        return _CharacterGroup(newlist)
+
+    def filterGenders(self, genders, incl_none=False):
+        newlist = []
+        for thing in self._things:
+            if(thing.gender in genders and (thing is not None or (thing is None and incl_none))):
+                newlist.append(thing)
+        return _CharacterGroup(newlist)
 
 class Character(object):
     '''The base identity of an epic character''' 
@@ -198,6 +331,48 @@ class _CharacterInstanceGroup(_DataGroup):
     
     def getGenders(self):
         return [x._gender for x in self._things]
+    
+    def filterIDs(self, ids, incl_none=False):
+        newlist = []
+        for thing in self._things:
+            if(thing.id in ids and (thing is not None or (thing is None and incl_none))):
+                newlist.append(thing)
+        return _CharacterInstanceGroup(newlist)
+    
+    def filterContexts(self, contexts, incl_none=False):
+        newlist = []
+        for thing in self._things:
+            if(thing.context in contexts and (thing is not None or (thing is None and incl_none))):
+                newlist.append(thing)
+        return _CharacterInstanceGroup(newlist)
+
+    def filterChars(self, chars, incl_none=False):
+        newlist = []
+        for thing in self._things:
+            if(thing.char in chars and (thing is not None or (thing is None and incl_none))):
+                newlist.append(thing)
+        return _CharacterInstanceGroup(newlist)
+
+    def filterDisgs(self, disgs, incl_none=False):
+        newlist = []
+        for thing in self._things:
+            if(thing.disg in disgs and (thing is not None or (thing is None and incl_none))):
+                newlist.append(thing)
+        return _CharacterInstanceGroup(newlist)
+
+    def filterNames(self, names, incl_none=False):
+        newlist = []
+        for thing in self._things:
+            if(thing._names in names and (thing is not None or (thing is None and incl_none))):
+                newlist.append(thing)
+        return _CharacterInstanceGroup(newlist)
+
+    def filterGenders(self, genders, incl_none=False):
+        newlist = []
+        for thing in self._things:
+            if(thing._gender in genders and (thing is not None or (thing is None and incl_none))):
+                newlist.append(thing)
+        return _CharacterInstanceGroup(newlist)
 
 class CharacterInstance(object):
     '''An instance of a character in context'''
@@ -229,7 +404,7 @@ class CharacterInstance(object):
                 self.char = self.api.indexedCharacter(data['char'])
             else:
                 self.char = Character(data['char'], api=self.api)
-            del data['char']
+            data['char'] = self.char
         if 'disg' in data:
             # FIXME
             self.disg = data['disg'] 
@@ -272,6 +447,27 @@ class _SpeechClusterGroup(_DataGroup):
     def getWorks(self):
         return [x.work for x in self._things]
 
+    def filterIDs(self, ids, incl_none=False):
+        newlist = []
+        for thing in self._things:
+            if(thing.id in ids and (thing is not None or (thing is None and incl_none))):
+                newlist.append(thing)
+        return _SpeechClusterGroup(newlist)
+
+    def filterTypes(self, types, incl_none=False):
+        newlist = []
+        for thing in self._things:
+            if(thing.type in types and (thing is not None or (thing is None and incl_none))):
+                newlist.append(thing)
+        return _SpeechClusterGroup(newlist)
+
+    def filterWDs(self, works, incl_none=False):
+        newlist = []
+        for thing in self._things:
+            if(thing.work in works and (thing is not None or (thing is None and incl_none))):
+                newlist.append(thing)
+        return _SpeechClusterGroup(newlist)
+
 class SpeechCluster(object):
     '''A speech cluster'''
     
@@ -299,7 +495,7 @@ class SpeechCluster(object):
                 self.work = self.api.indexedWork(data['work'])
             else:
                 self.work = Work(data['work'], api=self.api)
-            del data['work']
+            data['work'] = self.work
             
 
 class _SpeechGroup(_DataGroup):
@@ -329,7 +525,63 @@ class _SpeechGroup(_DataGroup):
     
     def getParts(self):
         return [x.part for x in self._things]
-    
+
+    def filterIDs(self, ids, incl_none=False):
+        newlist = []
+        for thing in self._things:
+            if(thing.id in ids and (thing is not None or (thing is None and incl_none))):
+                newlist.append(thing)
+        return _SpeechGroup(newlist)
+
+    def filterClusters(self, clusters, incl_none=False):
+        newlist = []
+        for thing in self._things:
+            if(thing.cluster in clusters and (thing is not None or (thing is None and incl_none))):
+                newlist.append(thing)
+        return _SpeechGroup(newlist)
+
+    def filterSeqs(self, seqs, incl_none=False):
+        newlist = []
+        for thing in self._things:
+            if(thing.seq in seqs and (thing is not None or (thing is None and incl_none))):
+                newlist.append(thing)
+        return _SpeechGroup(newlist)
+
+    def filterL_FIs(self, l_fis, incl_none=False):
+        newlist = []
+        for thing in self._things:
+            if(thing.l_fi in l_fis and (thing is not None or (thing is None and incl_none))):
+                newlist.append(thing)
+        return _SpeechGroup(newlist)
+
+    def filterL_LAs(self, l_las, incl_none=False):
+        newlist = []
+        for thing in self._things:
+            if(thing.l_la in l_las and (thing is not None or (thing is None and incl_none))):
+                newlist.append(thing)
+        return _SpeechGroup(newlist)
+
+    def filterSpkrs(self, spkrs, incl_none=False):
+        newlist = []
+        for thing in self._things:
+            if(thing.spkr in spkrs and (thing is not None or (thing is None and incl_none))):
+                newlist.append(thing)
+        return _SpeechGroup(newlist)
+
+    def filterAddrs(self, addrs, incl_none=False):
+        newlist = []
+        for thing in self._things:
+            if(thing.addr in addrs and (thing is not None or (thing is None and incl_none))):
+                newlist.append(thing)
+        return _SpeechGroup(newlist)
+
+    def filterParts(self, parts, incl_none=False):
+        newlist = []
+        for thing in self._things:
+            if(thing.part in parts and (thing is not None or (thing is None and incl_none))):
+                newlist.append(thing)
+        return _SpeechGroup(newlist)
+
 class Speech(object):
     '''A single speech'''
 
@@ -360,7 +612,7 @@ class Speech(object):
                 self.cluster = self.api.indexedSpeechCluster(data['cluster'])
             else:
                 self.cluster = SpeechCluster(data['cluster'], api=self.api)
-            del data['cluster']
+            data['cluster'] = self.cluster
         if 'seq' in data:
             self.seq = data['seq']
         if 'l_fi' in data:
@@ -374,7 +626,7 @@ class Speech(object):
             else:
                 self.spkr = [CharacterInstance(c, api=self.api) 
                                     for c in data['spkr']]
-            del data['spkr']
+            data['spkr'] = self.spkr
         if 'addr' in data:
             if self.index:
                 self.addr = [self.api.indexedCharacterInstance(c)
@@ -382,7 +634,7 @@ class Speech(object):
             else:
                 self.addr = [CharacterInstance(c, api=self.api) 
                                     for c in data['addr']]
-            del data['addr']
+            data['addr'] = self.addr
         if 'part' in data:
             self.part = data['part']
 

@@ -2,6 +2,37 @@ import requests
 from MyCapytain.resolvers.cts.api import HttpCtsResolver
 from MyCapytain.retrievers.cts5 import HttpCtsRetriever
 
+class _DataGroup(object):
+    def __init__(self, things=None):
+        self._things=things
+
+    def filter(self, attribute, value):
+        newlist = []
+        for thing in self._things:
+            if thing._attributes[attribute] == value:
+                newlist.append(thing)
+        return self.__init__(newlist)
+    
+    @property
+    def list(self):
+        return [x for x in self._things]
+
+class _AuthorGroup(_DataGroup):
+    def __init__(self, things=None):
+        self._things = things
+    
+    def getIDs(self):
+        return [x.id for x in self._things]
+    
+    def getNames(self):
+        return [x.name for x in self._things]
+
+    def getWDs(self):
+        return [x.wd for x in self._things]
+    
+    def getUrns(self):
+        return [x.urn for x in self._things]
+
 class Author(object):
     '''An ancient author'''
 
@@ -12,6 +43,7 @@ class Author(object):
         self.name = None
         self.wd = None
         self.urn = None
+        self._attributes = data
         
         if data:
             self._from_data(data)
@@ -28,7 +60,25 @@ class Author(object):
             self.wd = data['wd']
         if 'urn' in data:
             self.urn = data['urn']
-        
+
+class _WorkGroup(_DataGroup):
+    def __init__(self, things=None):
+        self._things = things   
+
+    def getIDs(self):
+        return [x.id for x in self._things]
+    
+    def getTitles(self):
+        return [x.title for x in self._things]
+    
+    def getWDs(self):
+        return [x.wd for x in self._things]
+
+    def getURNs(self):
+        return [x.urn for x in self._things]
+    
+    def getAuthors(self):
+        return [x.author for x in self._things]
 
 class Work(object):
     '''An epic poem'''
@@ -41,6 +91,7 @@ class Work(object):
         self.wd = None
         self.urn = None
         self.author = None
+        self._attributes = data
 
         if data:
             self._from_data(data)
@@ -62,7 +113,32 @@ class Work(object):
                 self.author = self.api.indexedAuthor(data['author'])
             else:
                 self.author = Author(data['author'], api=self.api)
+            del data['author']
 
+class _CharacterGroup(_DataGroup):
+    def __init__(self, things=None):
+        self._things = things
+    
+    def getIDs(self):
+        return [x.id for x in self._things]
+    
+    def getNames(self):
+        return [x.name for x in self._things]
+    
+    def getBeings(self):
+        return [x.being for x in self._things]
+    
+    def getTypes(self):
+        return [x.type for x in self._things]
+    
+    def getWDs(self):
+        return [x.wd for x in self._things]
+
+    def getMantos(self):
+        return [x.manto for x in self._things]
+    
+    def getGenders(self):
+        return [x.gender for x in self._things]
 
 class Character(object):
     '''The base identity of an epic character''' 
@@ -76,6 +152,8 @@ class Character(object):
         self.type = None
         self.wd = None
         self.manto = None
+        self.gender = None
+        self._attributes = data
         
         if data:
             self._from_data(data)
@@ -96,7 +174,30 @@ class Character(object):
             self.wd = data['wd']
         if 'manto' in data:
             self.manto = data['manto']
+        if 'gender' in data:
+            self.gender = data['gender']
 
+class _CharacterInstanceGroup(_DataGroup):
+    def __init__(self, things=None):
+        self._things = things
+    
+    def getIDs(self):
+        return [x.id for x in self._things]
+    
+    def getContexts(self):
+        return [x.context for x in self._things]
+    
+    def getChars(self):
+        return [x.char for x in self._things]
+    
+    def getDisgs(self):
+        return [x.disg for x in self._things]
+    
+    def getNames(self):
+        return [x._name for x in self._things]
+    
+    def getGenders(self):
+        return [x._gender for x in self._things]
 
 class CharacterInstance(object):
     '''An instance of a character in context'''
@@ -109,7 +210,9 @@ class CharacterInstance(object):
         self.char = None
         self.disg = None
         self._name = None
-    
+        self._gender = None
+        self._attributes = data
+
         if data:
             self._from_data(data)
         
@@ -126,10 +229,12 @@ class CharacterInstance(object):
                 self.char = self.api.indexedCharacter(data['char'])
             else:
                 self.char = Character(data['char'], api=self.api)
+            del data['char']
         if 'disg' in data:
             # FIXME
-            self.disg = data['disg']
-
+            self.disg = data['disg'] 
+        if 'gender' in data and data['gender'] is not None:
+            self._gender = data['gender']
     
     def getName(self):
         '''Return a name for the character instance
@@ -146,6 +251,26 @@ class CharacterInstance(object):
         
         return name
 
+    @property
+    def gender(self):
+        return self._gender or self.char.gender
+    
+    '''@gender.setter
+    def gender(self, new_gender):
+        self._gender = new_gender'''
+
+class _SpeechClusterGroup(_DataGroup):
+    def __init__(self, speeches=None):
+        self._things = speeches
+    
+    def getIDs(self):
+        return [x.id for x in self._things]
+    
+    def getTypes(self):
+        return [x.type for x in self._things]
+    
+    def getWorks(self):
+        return [x.work for x in self._things]
 
 class SpeechCluster(object):
     '''A speech cluster'''
@@ -156,6 +281,7 @@ class SpeechCluster(object):
         self.id = None
         self.type = None
         self.work = None
+        self._attributes = data
         
         if data:
             self._from_data(data)
@@ -173,15 +299,43 @@ class SpeechCluster(object):
                 self.work = self.api.indexedWork(data['work'])
             else:
                 self.work = Work(data['work'], api=self.api)
+            del data['work']
             
 
+class _SpeechGroup(_DataGroup):
+    def __init__(self, speeches=None):
+        self._things = speeches
+    
+    def getIDs(self):
+        return [x.id for x in self._things]
+    
+    def getClusters(self):
+        return [x.cluster for x in self._things]
+    
+    def getSeqs(self):
+        return [x.seq for x in self._things]
+    
+    def get_L_FIs(self):
+        return [x.l_fi for x in self._things]
+    
+    def get_L_LAs(self):
+        return [x.l_la for x in self._things]
+    
+    def getSpkrs(self):
+        return [x.spkr for x in self._things]
+    
+    def getAddrs(self):
+        return [x.addr for x in self._things]
+    
+    def getParts(self):
+        return [x.part for x in self._things]
+    
 class Speech(object):
     '''A single speech'''
 
     def __init__(self, data=None, api=None, index=False):
         self.api = api
         self.index = (api is not None and index is not None)        
-        self.data = data
         self.id = None
         self.cluster = None
         self.seq = None
@@ -190,6 +344,7 @@ class Speech(object):
         self.spkr = None
         self.addr = None
         self.part = None
+        self._attributes = data
         
         if data:
             self._from_data(data)
@@ -205,6 +360,7 @@ class Speech(object):
                 self.cluster = self.api.indexedSpeechCluster(data['cluster'])
             else:
                 self.cluster = SpeechCluster(data['cluster'], api=self.api)
+            del data['cluster']
         if 'seq' in data:
             self.seq = data['seq']
         if 'l_fi' in data:
@@ -218,6 +374,7 @@ class Speech(object):
             else:
                 self.spkr = [CharacterInstance(c, api=self.api) 
                                     for c in data['spkr']]
+            del data['spkr']
         if 'addr' in data:
             if self.index:
                 self.addr = [self.api.indexedCharacterInstance(c)
@@ -225,6 +382,7 @@ class Speech(object):
             else:
                 self.addr = [CharacterInstance(c, api=self.api) 
                                     for c in data['addr']]
+            del data['addr']
         if 'part' in data:
             self.part = data['part']
 
@@ -288,8 +446,10 @@ class Speech(object):
 
 class DicesAPI(object):
     '''a connection to the DICES API'''
+    DEFAULT_API = 'https://fierce-ravine-99183.herokuapp.com/api'
+    DEFAULT_CTS = 'http://cts.perseids.org/api/cts/'
     
-    def __init__(self, dices_api=None, cts_api=None):
+    def __init__(self, dices_api=DEFAULT_API, cts_api=DEFAULT_CTS):
         self.API = dices_api
         self.CTS_API = cts_api
         self.resolver = HttpCtsResolver(HttpCtsRetriever(self.CTS_API))
@@ -354,7 +514,7 @@ class DicesAPI(object):
         results = self.getPagedJSON('speeches', dict(**kwargs), progress=progress)
         
         # convert to Speech objects
-        speeches = [self.indexedSpeech(s) for s in results]
+        speeches = _SpeechGroup([self.indexedSpeech(s) for s in results])
         
         return speeches
 
@@ -366,7 +526,7 @@ class DicesAPI(object):
         results = self.getPagedJSON('clusters', dict(**kwargs), progress=progress)
         
         # convert to Clusters objects
-        clusters = [self.indexedSpeechCluster(s) for s in results]
+        clusters = _SpeechClusterGroup([self.indexedSpeechCluster(s) for s in results])
         
         return clusters
 
@@ -378,7 +538,7 @@ class DicesAPI(object):
         results = self.getPagedJSON('characters', dict(**kwargs), progress=progress)
         
         # convert to Character objects
-        characters = [Character(c) for c in results]
+        characters = _CharacterGroup([Character(c) for c in results])
         
         return characters
 
@@ -386,21 +546,21 @@ class DicesAPI(object):
         '''Fetch works from the API'''
         results = self.getPagedJSON('works', dict(**kwargs), progress=progress)
 
-        works = [self.indexedWork(w) for w in results]
+        works = _WorkGroup([self.indexedWork(w) for w in results])
         return works
 
     def getAuthors(self, progress=False, **kwargs):
         '''Fetch authors from the API'''
         results = self.getPagedJSON('authors', dict(**kwargs), progress=progress)
 
-        authors = [self.indexedAuthor(a) for a in results]
+        authors = _AuthorGroup([self.indexedAuthor(a) for a in results])
         return authors
 
     def getInstances(self, progress=False, **kwargs):
         '''Fetch character instances from the API'''
         results = self.getPagedJSON('instances', dict(**kwargs), progress=progress)
 
-        instances = [self.indexedCharacterInstance(i) for i in results]
+        instances = _CharacterInstanceGroup([self.indexedCharacterInstance(i) for i in results])
         return instances
         
     

@@ -1,11 +1,16 @@
 import requests
 from MyCapytain.resolvers.cts.api import HttpCtsResolver
 from MyCapytain.retrievers.cts5 import HttpCtsRetriever
+import logging
 
 class _DataGroup(object):
     '''Parent class for all DataGroups used to hold objects from the API'''
-    def __init__(self, things=None):
+    def __init__(self, things=None, api=None):
         self._things=things
+        if api is None:
+            print("Could not create a datagroup with no API, exiting")
+            quit()
+        self.api=api
     
     def __iter__(self):
         for x in self._things:
@@ -22,39 +27,48 @@ class _DataGroup(object):
         if(isinstance(datagroup, self.__class__)):
             self._things.extend(datagroup._things)
             self._things = list(set(self._things))
+        else:
+            self.api.logWarning("Could not extend the given datagroup because of conflicting classes, skipping")
 
     def filterAttribute(self, attribute, value):
         '''Filters all objects in this DataGroup using the specified attribute for a given value'''
         newlist = []
         for thing in self._things:
-            if thing._attributes[attribute] == value:
+            if attribute in thing._attreibutes and thing._attributes[attribute] == value:
                 newlist.append(thing)
         #return self.__init__(newlist)
-        return type(self)(newlist)
+        if len(newlist) == 0:
+            self.api.logWarning("Filtering on attribute [" + str(attribute) + "] searching for the value [" + str(value) + "] yielded no results")
+        return type(self)(newlist, self.api)
     
     def filterList(self, attribute, filterList):
         '''Filters all objects in this DataGroup using the specified attribute and checks if the value exists in the given list'''
         newlist = []
         for thing in self._things:
-            if(thing._attributes[attribute] in filterList and thing._attributes[attribute] is not None):
+            if(attribute in thing._attreibutes and thing._attributes[attribute] in filterList and thing._attributes[attribute] is not None):
                 newlist.append(thing)
+        if len(newlist) == 0:
+            self.api.logWarning("Filtering on attribute [" + str(attribute) + "] yielded no results")
         return type(self)(newlist)
     
     def deepFilterAttributes(self, attributes, value):
         '''Filters all objects in this DataGroup by filtering the attributes given from a list of attributes (If given ["cluster", "work"] it will check if object->attributes->cluster->work equals the given value)'''
-        print("Deep filtering")
+        #print("Deep filtering")
         newlist = []
         for thing in self._things:
             filterList = thing._attributes
             success = True
             for attr in attributes:
                 if(attr not in filterList):
+                    self.api.logWarning("the attribute [" + str(attr) + "] could not be found, skipping this element of the list")
                     success = False
-                    print("Failed")
+                    #print("Failed")
                     break
                 filterList=filterList[attr]
             if(success and filterList == value):
                 newlist.append(thing)
+        if len(newlist) == 0:
+            self.api.logWarning("Deep filtering for the value [" + str(value) + "] yielded no results")
         return type(self)(newlist)
             
     @property
@@ -63,8 +77,12 @@ class _DataGroup(object):
 
 class _AuthorGroup(_DataGroup):
     '''Datagroup used to hold a list of Authors'''
-    def __init__(self, things=None):
+    def __init__(self, things=None, api=None):
         self._things = things
+        if api is None:
+            print("Could not create a datagroup with no API, exiting")
+            quit()
+        self.api = api
     
     def getIDs(self):
         '''Returns a list of author ID's'''
@@ -144,8 +162,12 @@ class Author(object):
 
 class _WorkGroup(_DataGroup):
     '''Datagroup used to hold a list of works'''
-    def __init__(self, things=None):
-        self._things = things   
+    def __init__(self, things=None, api=None):
+        self._things = things 
+        if api is None:
+            print("Could not create a datagroup with no API, exiting")
+            quit()
+        self.api=api  
 
     def getIDs(self):
         '''Returns a list of work ID's'''
@@ -244,8 +266,12 @@ class Work(object):
 
 class _CharacterGroup(_DataGroup):
     '''Datagroup used to hold a list of Characters'''
-    def __init__(self, things=None):
+    def __init__(self, things=None, api=None):
         self._things = things
+        if api is None:
+            print("Could not create a datagroup with no API, exiting")
+            quit()
+        self.api=api
     
     def getIDs(self):
         '''Returns a list of character ID's'''
@@ -370,8 +396,12 @@ class Character(object):
 
 class _CharacterInstanceGroup(_DataGroup):
     '''Datagroup used to hold a list of Character Instances'''
-    def __init__(self, things=None):
+    def __init__(self, things=None, api=None):
         self._things = things
+        if api is None:
+            print("Could not create a datagroup with no API, exiting")
+            quit()
+        self.api=api
     
     def getIDs(self):
         '''Returns a list of character instance ID's'''
@@ -507,8 +537,12 @@ class CharacterInstance(object):
 
 class _SpeechClusterGroup(_DataGroup):
     '''Datagroup used to hold a list of Speech Cluster's'''
-    def __init__(self, speeches=None):
-        self._things = speeches
+    def __init__(self, things=None, api=None):
+        self._things = things
+        if api is None:
+            print("Could not create a datagroup with no API, exiting")
+            quit()
+        self.api=api
     
     def getIDs(self):
         '''Returns a list of Speech Cluster ID's'''
@@ -578,8 +612,12 @@ class SpeechCluster(object):
 
 class _SpeechGroup(_DataGroup):
     '''Datagroup used to hold a list of Speech's'''
-    def __init__(self, speeches=None):
-        self._things = speeches
+    def __init__(self, things=None, api=None):
+        self._things = things
+        if api is None:
+            print("Could not create a datagroup with no API, exiting")
+            quit()
+        self.api=api
     
     def getIDs(self):
         '''Returns a list of Speech ID's'''
@@ -826,9 +864,23 @@ class DicesAPI(object):
     DEFAULT_API = 'https://fierce-ravine-99183.herokuapp.com/api'
     DEFAULT_CTS = 'http://cts.perseids.org/api/cts/'
     
-    def __init__(self, dices_api=DEFAULT_API, cts_api=DEFAULT_CTS):
+    def __init__(self, dices_api=DEFAULT_API, cts_api=DEFAULT_CTS, logfile=None):
         self.API = dices_api
         self.CTS_API = cts_api
+        self.log = None
+        if(logfile is not None):
+            self.log = logging.getLogger("dicesLog")
+            self.log.setLevel(logging.DEBUG)
+            formatter = logging.Formatter(fmt='%(asctime)s - [%(levelname)s] %(message)s')
+            fh = logging.FileHandler(logfile)
+            fh.setLevel(logging.DEBUG)
+            fh.setFormatter(formatter)
+            sh = logging.StreamHandler()
+            sh.setLevel(logging.ERROR)
+            sh.setFormatter(formatter)
+            self.log.addHandler(fh)
+            self.log.addHandler(sh)
+            self.logThis("New log created")
         self.resolver = HttpCtsResolver(HttpCtsRetriever(self.CTS_API))
         self._ProgressClass = None
         self._work_index = {}
@@ -881,7 +933,23 @@ class DicesAPI(object):
             print(f'Expected {count} results, got {len(results)}!')
 
         return results
+
+
+    def logThis(self, message):
+        if self.log is not None:
+            self.log.debug(message)
         
+    def logWarning(self, message):
+        if self.log is not None:
+            self.log.warning(message)
+    
+    def logError(self, message):
+        if self.log is not None:
+            self.log.error(message)
+    
+    def logCritical(self, message):
+        if self.log is not None:
+            self.log.critical(message)
         
     def getSpeeches(self, progress=False, **kwargs):
         '''Retrieve speeches from API'''
@@ -890,7 +958,9 @@ class DicesAPI(object):
         results = self.getPagedJSON('speeches', dict(**kwargs), progress=progress)
         
         # convert to Speech objects
-        speeches = _SpeechGroup([self.indexedSpeech(s) for s in results])
+        speeches = _SpeechGroup([self.indexedSpeech(s) for s in results], api=self)
+
+        self.logThis("Successfully retrieved a list of speeches")
         
         return speeches
 
@@ -902,7 +972,8 @@ class DicesAPI(object):
         results = self.getPagedJSON('clusters', dict(**kwargs), progress=progress)
         
         # convert to Clusters objects
-        clusters = _SpeechClusterGroup([self.indexedSpeechCluster(s) for s in results])
+        clusters = _SpeechClusterGroup([self.indexedSpeechCluster(s) for s in results], api=self)
+        self.logThis("Successfully retrieved a list of clusters")
         
         return clusters
 
@@ -914,7 +985,8 @@ class DicesAPI(object):
         results = self.getPagedJSON('characters', dict(**kwargs), progress=progress)
         
         # convert to Character objects
-        characters = _CharacterGroup([self.indexedCharacter(c) for c in results])
+        characters = _CharacterGroup([self.indexedCharacter(c) for c in results], api=self)
+        self.logThis("Successfully retrieved a list of characters")
         
         return characters
 
@@ -922,21 +994,24 @@ class DicesAPI(object):
         '''Fetch works from the API'''
         results = self.getPagedJSON('works', dict(**kwargs), progress=progress)
 
-        works = _WorkGroup([self.indexedWork(w) for w in results])
+        works = _WorkGroup([self.indexedWork(w) for w in results], api=self)
+        self.logThis("Successfully retrieved a list of works")
         return works
 
     def getAuthors(self, progress=False, **kwargs):
         '''Fetch authors from the API'''
         results = self.getPagedJSON('authors', dict(**kwargs), progress=progress)
 
-        authors = _AuthorGroup([self.indexedAuthor(a) for a in results])
+        authors = _AuthorGroup([self.indexedAuthor(a) for a in results], api=self)
+        self.logThis("Successfully retrieved a list of authors")
         return authors
 
     def getInstances(self, progress=False, **kwargs):
         '''Fetch character instances from the API'''    
         results = self.getPagedJSON('instances', dict(**kwargs), progress=progress)
 
-        instances = _CharacterInstanceGroup([self.indexedCharacterInstance(i) for i in results])
+        instances = _CharacterInstanceGroup([self.indexedCharacterInstance(i) for i in results], api=self)
+        self.logThis("Successfully retrieved a list of character instances")
         return instances
         
     
@@ -946,9 +1021,11 @@ class DicesAPI(object):
         
         if data['id'] in self._author_index:
             a = self._author_index[data['id']]
+            self.logThis("Fetching author with ID " + str(data['id']))
         else:
             a = Author(data, api=self, index=True)
             self._author_index[data['id']] = a
+            self.logThis("Creating new author with ID " + str(data['id']))
  
         return a
 
@@ -958,9 +1035,11 @@ class DicesAPI(object):
         
         if data['id'] in self._work_index:
             w = self._work_index[data['id']]
+            self.logThis("Fetching work with ID " + str(data['id']))
         else:
             w = Work(data, api=self, index=True)
             self._work_index[data['id']] = w
+            self.logThis("Creating new work with ID " + str(data['id']))
  
         return w
 
@@ -970,10 +1049,11 @@ class DicesAPI(object):
         
         if data['id'] in self._speech_index:
             s = self._speech_index[data['id']]
+            self.logThis("Fetching speech with ID " + str(data['id']))
         else:
             s = Speech(data, api=self, index=True)
             self._speech_index[data['id']] = s
-        
+            self.logThis("Creating new speech with ID " + str(data['id']))
         return s
 
         
@@ -982,9 +1062,11 @@ class DicesAPI(object):
         
         if data['id'] in self._speechcluster_index:
             s = self._speechcluster_index[data['id']]
+            self.logThis("Fetching cluster with ID " + str(data['id']))
         else:
             s = SpeechCluster(data, api=self, index=True)
             self._speechcluster_index[data['id']] = s
+            self.logThis("Creating new cluster with ID " + str(data['id']))
         
         return s
 
@@ -995,10 +1077,12 @@ class DicesAPI(object):
         if data['id'] in self._character_index:
             #print("Recycling character with ID " + str(data['id']))
             c = self._character_index[data['id']]
+            self.logThis("Fetching character with ID " + str(data['id']))
         else:
             #print("Adding character with ID " + str(data['id']))
             c = Character(data, api=self, index=True)
             self._character_index[data['id']] = c
+            self.logThis("Creating new character with ID " + str(data['id']))
         
         return c
 
@@ -1008,8 +1092,10 @@ class DicesAPI(object):
         
         if data['id'] in self._characterinstance_index:
             c = self._characterinstance_index[data['id']]
+            self.logThis("Fetching character instance with ID " + str(data['id']))
         else:
             c = CharacterInstance(data, api=self, index=True)
             self._characterinstance_index[data['id']] = c
+            self.logThis("Creating new character instance with ID " + str(data['id']))
         
         return c

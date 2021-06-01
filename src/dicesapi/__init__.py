@@ -1128,9 +1128,9 @@ class DicesAPI(object):
     def _detailtostring(self):
         if self.logdetail == self.LOG_NODETAIL:
             return "No"
-        elif self.logdetail == self.LOWDETAIL:
+        elif self.logdetail == self.LOG_LOWDETAIL:
             return "Low"
-        elif self.logdetail == self.MEDDETAIL:
+        elif self.logdetail == self.LOG_MEDDETAIL:
             return "Medium"
         else:
             return "High"

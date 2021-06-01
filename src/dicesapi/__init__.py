@@ -4,9 +4,23 @@ from MyCapytain.retrievers.cts5 import HttpCtsRetriever
 import logging
 
 class FilterParams(object):
-    GENDER_FEMALE="F"
-    GENDER_MALE="M"
-    GENDER_OTHER="O"
+    CHARACTER_GENDER_FEMALE="F"
+    CHARACTER_GENDER_MALE="M"
+    CHARACTER_GENDER_NON_BINARY="NB"
+
+    CHARACTER_TYPE_INDIVIDUAL='individual'
+    CHARACTER_TYPE_COLLECTIVE='collective'
+    CHARACTER_TYPE_OTHER='other'
+
+    CHARACTER_BEING_HUMAN='human'
+    CHARACTER_BEING_GOD='god'
+    CHARACTER_BEING_OTHER='other'
+
+    CLUSTER_TYPE_SOLILOQUY='S'
+    CLUSTER_TYPE_MONOLOGUE='M'
+    CLUSTER_TYPE_DIALOGUE='D'
+    CLUSTER_TYPE_GENERAL='G'
+
 
 class _DataGroup(object):
     '''Parent class for all DataGroups used to hold objects from the API'''
@@ -27,14 +41,47 @@ class _DataGroup(object):
     def __len__(self):
         return len(self._things)
 
-    def extend(self, datagroup):
+    def __iadd__(self, other):
+        if(isinstance(other, self.__class__)):
+            self.extend(other, False)
+        else:
+            self.api.logWarning("Cannot add two datagroups of different classes", self.api.LOG_LOWDETAIL)
+    
+    def __add__(self, other):
+        if(isinstance(other, self.__class__)):
+            thing = type(self)([x for x in self._things], self.api)
+            thing.extend(other)
+            return thing
+        else:
+            self.api.logWarning("Cannot add two datagroups of different classes", self.api.LOG_LOWDETAIL)
+    
+    def __isub__(self, other):
+        if(isinstance(other, self.__class__)):
+            self._things = [thing for thing in self._things if thing not in other._things] 
+        else:
+            self.api.logWarning("Cannot subtract two datagroups of different classes", self.api.LOG_LOWDETAIL)
+    
+    def __sub__(self, other):
+        if(isinstance(other, self.__class__)):
+            return type(self)([thing for thing in self._things if thing not in other._things], self.api)
+        else:
+            self.api.logWarning("Cannot subtract two datagroups of different classes", self.api.LOG_LOWDETAIL)
+
+    def extend(self, datagroup, duplicates=False):
         '''Combines two data groups of the same type'''
         self.api.logThis("Attempting to extend a " + self.__class__.__name__[1:], self.api.LOG_MEDDETAIL)  
         if(isinstance(datagroup, self.__class__)):
             self._things.extend(datagroup._things)
-            self._things = list(set(self._things))
+            if(not duplicates):
+                self._things = list(set(self._things))
         else:
             self.api.logWarning("Could not extend the given datagroup because of conflicting classes, skipping", self.api.LOG_LOWDETAIL)
+
+    def unionize(datagroup1, datagroup2, api, duplicates=True):
+        if(datagroup1.__class__ == datagroup2.__class__):
+            return type(datagroup1)(datagroup1.list, api).extend(datagroup2, duplicates)
+        else:
+            api.logWarning("Cannot unionize two datagroups with different class types")
 
     def filterAttribute(self, attribute, value):
         '''Filters all objects in this DataGroup using the specified attribute for a given value'''
@@ -80,15 +127,12 @@ class _DataGroup(object):
             self.api.logWarning("Deep filtering for the value [" + str(value) + "] yielded no results", self.api.LOG_LOWDETAIL)
         return type(self)(newlist, self.api)
     
-    def advancedFilter(self, searchOn, filterFunc):
+    def advancedFilter(self, filterFunc):
 
         self.api.logThis("Advanced filtering " + self.__class__.__name__[1:], self.api.LOG_MEDDETAIL)
-        if len(searchOn) != len(self):
-            self.api.logWarning("Attempting to advance filter with two lists of differing length. Skipping", self.api.LOG_LOWDETAIL)
-            return self
         newlist = []
-        for num, thing in enumerate(self._things):
-            if filterFunc(searchOn[num]):
+        for thing in self._things:
+            if filterFunc(thing):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Advanced filtering yielded no results", self.api.LOG_LOWDETAIL)
@@ -1075,10 +1119,21 @@ class DicesAPI(object):
             sh.setLevel(logging.ERROR)
             sh.setFormatter(formatter)
             self.log.addHandler(fh)
-            self.log.addHandler(sh)
-            self.logThis("New log created", self.LOG_NODETAIL)
+            self.log.addHandler(sh)     
+            self.logThis("New log created with " + self._detailtostring() + " Detail", self.LOG_NODETAIL)
         else:
             self.logWarning("A new log cannot be initialized when a log already exists", self.LOG_MEDDETAIL)
+        
+    
+    def _detailtostring(self):
+        if self.logdetail == self.LOG_NODETAIL:
+            return "No"
+        elif self.logdetail == self.LOWDETAIL:
+            return "Low"
+        elif self.logdetail == self.MEDDETAIL:
+            return "Medium"
+        else:
+            return "High"
     
     def clearLog(self):
         if self.log:

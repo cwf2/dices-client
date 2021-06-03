@@ -4,3 +4,4 @@ venv
 *.csv
 src/dices_client.egg-info/
 Untitled*
+pip-wheel-metadata

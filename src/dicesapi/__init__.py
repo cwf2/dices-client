@@ -4,16 +4,17 @@ from MyCapytain.retrievers.cts5 import HttpCtsRetriever
 import logging
 
 class FilterParams(object):
-    CHARACTER_GENDER_FEMALE="F"
-    CHARACTER_GENDER_MALE="M"
-    CHARACTER_GENDER_NON_BINARY="NB"
+    CHARACTER_GENDER_FEMALE="female"
+    CHARACTER_GENDER_MALE="male"
+    CHARACTER_GENDER_NON_BINARY="non-binary"
 
-    CHARACTER_TYPE_INDIVIDUAL='individual'
-    CHARACTER_TYPE_COLLECTIVE='collective'
-    CHARACTER_TYPE_OTHER='other'
+    CHARACTER_NUMBER_INDIVIDUAL='individual'
+    CHARACTER_NUMBER_COLLECTIVE='collective'
+    CHARACTER_NUMBER_OTHER='other'
 
-    CHARACTER_BEING_HUMAN='human'
-    CHARACTER_BEING_GOD='god'
+    CHARACTER_BEING_MORTAL='mortal'
+    CHARACTER_BEING_DIVINE='divine'
+    CHARACTER_BEING_CREATURE='creature'
     CHARACTER_BEING_OTHER='other'
 
     CLUSTER_TYPE_SOLILOQUY='S'
@@ -380,9 +381,9 @@ class _CharacterGroup(_DataGroup):
         '''Returns a list of character Being's'''
         return [x.being for x in self._things]
     
-    def getTypes(self):
-        '''Returns a list of character Type's'''
-        return [x.type for x in self._things]
+    def getNumbers(self):
+        '''Returns a list of character Number's'''
+        return [x.number for x in self._things]
     
     def getWDs(self):
         '''Returns a list of character WD's'''
@@ -429,15 +430,15 @@ class _CharacterGroup(_DataGroup):
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " Being's returned no entries", self.api.LOG_LOWDETAIL)
         return _CharacterGroup(newlist, self.api)
 
-    def filterTypes(self, types, incl_none=False):
-        '''Filter on the characters Type's'''
-        self.api.logThis("Filtering " + self.__class__.__name__[1:] + " along Type's", self.api.LOG_MEDDETAIL)
+    def filterNumbers(self, numbers, incl_none=False):
+        '''Filter on the characters Number's'''
+        self.api.logThis("Filtering " + self.__class__.__name__[1:] + " along Number's", self.api.LOG_MEDDETAIL)
         newlist = []
         for thing in self._things:
-            if( (thing is not None or (thing is None and incl_none)) and thing.type is not None and thing.type in types ):
+            if( (thing is not None or (thing is None and incl_none)) and thing.number is not None and thing.number in numbers ):
                 newlist.append(thing)
         if len(newlist) == 0:
-            self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " Type's returned no entries", self.api.LOG_LOWDETAIL)
+            self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " Number's returned no entries", self.api.LOG_LOWDETAIL)
         return _CharacterGroup(newlist, self.api)
 
     def filterWDs(self, wds, incl_none=False):
@@ -482,10 +483,10 @@ class Character(object):
         self.id = None
         self.name = None
         self.being = None
-        self.type = None
+        self.number = None
+        self.gender = None
         self.wd = None
         self.manto = None
-        self.gender = None
         self._attributes = data
         
         if data:
@@ -501,14 +502,14 @@ class Character(object):
             self.name = data['name']
         if 'being' in data:
             self.being = data['being']
-        if 'type' in data:
-            self.type = data['type']
+        if 'number' in data:
+            self.number = data['number']
+        if 'gender' in data:
+            self.gender = data['gender']
         if 'wd' in data:
             self.wd = data['wd']
         if 'manto' in data:
             self.manto = data['manto']
-        if 'gender' in data:
-            self.gender = data['gender']
 
 class _CharacterInstanceGroup(_DataGroup):
     '''Datagroup used to hold a list of Character Instances'''
@@ -534,14 +535,26 @@ class _CharacterInstanceGroup(_DataGroup):
     def getDisgs(self):
         '''Returns a list of character instance Disg's'''
         return [x.disg for x in self._things]
+        
+    def getAnons(self):
+        '''Returns a list of character instance Anon's'''
+        return [x.anon for x in self._things]
     
     def getNames(self):
         '''Returns a list of character instance Name's'''
-        return [x._name for x in self._things]
+        return [x.name for x in self._things]
+
+    def getBeings(self):
+        '''Returns a list of character instance Being's'''
+        return [x.being for x in self._things]
+
+    def getNumbers(self):
+        '''Returns a list of character instance Name's'''
+        return [x.number for x in self._things]
     
     def getGenders(self):
         '''Returns a list of character instance Gender's'''
-        return [x._gender for x in self._things]
+        return [x.gender for x in self._things]
     
     def filterIDs(self, ids, incl_none=False):
         '''Filter on the character instances ID's'''
@@ -592,10 +605,32 @@ class _CharacterInstanceGroup(_DataGroup):
         self.api.logThis("Filtering " + self.__class__.__name__[1:] + " along Name's", self.api.LOG_MEDDETAIL)
         newlist = []
         for thing in self._things:
-            if( (thing is not None or (thing is None and incl_none)) and thing._name is not None and thing._name in names ):
+            if( (thing is not None or (thing is None and incl_none)) and thing.name is not None and thing.name in names ):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " Name's returned no entries", self.api.LOG_LOWDETAIL)
+        return _CharacterInstanceGroup(newlist, self.api)
+
+    def filterBeings(self, beings, incl_none=False):
+        '''Filter on the character instances Being's'''
+        self.api.logThis("Filtering " + self.__class__.__name__[1:] + " along Being's", self.api.LOG_MEDDETAIL)
+        newlist = []
+        for thing in self._things:
+            if( (thing is not None or (thing is None and incl_none)) and thing.being is not None and thing.being in beings ):
+                newlist.append(thing)
+        if len(newlist) == 0:
+            self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " Being's returned no entries", self.api.LOG_LOWDETAIL)
+        return _CharacterInstanceGroup(newlist, self.api)
+
+    def filterNumbers(self, numbers, incl_none=False):
+        '''Filter on the character instances Number's'''
+        self.api.logThis("Filtering " + self.__class__.__name__[1:] + " along Number's", self.api.LOG_MEDDETAIL)
+        newlist = []
+        for thing in self._things:
+            if( (thing is not None or (thing is None and incl_none)) and thing.number is not None and thing.number in number ):
+                newlist.append(thing)
+        if len(newlist) == 0:
+            self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " Number's returned no entries", self.api.LOG_LOWDETAIL)
         return _CharacterInstanceGroup(newlist, self.api)
 
     def filterGenders(self, genders, incl_none=False):
@@ -619,7 +654,10 @@ class CharacterInstance(object):
         self.context = None
         self.char = None
         self.disg = None
+        self.anon = None
         self._name = None
+        self._being = None
+        self._number = None
         self._gender = None
         self._attributes = data
 
@@ -634,7 +672,7 @@ class CharacterInstance(object):
             self.id = data['id']
         if 'context' in data:
             self.context = data['context']
-        if 'char' in data:
+        if 'char' in data and data['char'] is not None:
             if self.index:
                 self.char = self.api.indexedCharacter(data['char'])
             else:
@@ -642,32 +680,89 @@ class CharacterInstance(object):
             data['char'] = self.char
         if 'disg' in data:
             # FIXME
-            self.disg = data['disg'] 
+            self.disg = data['disg']
+        if 'anon' in data:
+            self.anon = data['anon']
+        if 'name' in data and data['name'] is not None:
+            self._name = data['name']
+        if 'being' in data and data['being'] is not None:
+            self._being = data['being']
+        if 'number' in data and data['number'] is not None:
+            self._number = data['number']
         if 'gender' in data and data['gender'] is not None:
             self._gender = data['gender']
-    
-    def getName(self):
-        '''Return a name for the character instance
         
-           - Defaults to name of underlying character
-        '''
+    @property
+    def name(self):
+        '''Get top-level name for the character instance'''
         
         if self._name is not None:
             name = self._name
         elif self.disg is not None:
-            name = self.char.disg.name
+            if isinstance(self.disg, Character):
+                name = self.disg.name
+            else:
+                name = self.disg
         else:
             name = self.char.name
         
         return name
 
+    @name.setter
+    def name(self, new_name):
+        '''Set instance-level name'''
+        self._name = new_name
+        
+    @name.deleter
+    def name(self):
+        '''Remove instance-level name'''
+        self._name = None
+
+    @property
+    def being(self):
+        '''Get top-level gender for character instance'''
+        return self._being or self.char.being
+    
+    @being.setter
+    def being(self, new_being):
+        '''Set instance-level being'''
+        self._being = new_being
+        
+    @being.deleter
+    def being(self):
+        '''Remove instance-level being'''
+        self._being = None
+    
+    @property
+    def number(self):
+        '''Get top-level number for character instance'''
+        return self._number or self.char.number
+
+    @number.setter
+    def number(self, new_number):
+        '''Set instance-level number'''
+        self._number = new_number
+        
+    @number.deleter
+    def number(self):
+        '''Remove instance-level number'''
+        self._number = None
+
     @property
     def gender(self):
+        '''Get top-level gender for character instance'''
         return self._gender or self.char.gender
-    
-    '''@gender.setter
+
+    @gender.setter
     def gender(self, new_gender):
-        self._gender = new_gender'''
+        '''Set instance-level gender'''
+        self._gender = new_gender
+        
+    @gender.deleter
+    def gender(self):
+        '''Remove instance-level gender'''
+        self._gender = None
+
 
 class _SpeechClusterGroup(_DataGroup):
     '''Datagroup used to hold a list of Speech Cluster's'''
@@ -683,7 +778,7 @@ class _SpeechClusterGroup(_DataGroup):
         return [x.id for x in self._things]
     
     def getTypes(self):
-        '''Returns a list of Speech CLuster type's'''
+        '''Returns a list of Speech Cluster type's'''
         return [x.type for x in self._things]
     
     def getWorks(self):

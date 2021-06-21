@@ -76,6 +76,10 @@ class _DataGroup(object):
             return type(self)([thing for thing in self._things if thing not in other._things], self.api)
         else:
             self.api.logWarning("Cannot subtract two datagroups of different classes", self.api.LOG_LOWDETAIL)
+    
+    @property
+    def list(self):
+        return [x for x in self._things]
 
 
     def extend(self, datagroup, duplicates=False):
@@ -93,8 +97,15 @@ class _DataGroup(object):
     def unionize(datagroup1, datagroup2, api, duplicates=True):
         if(datagroup1.__class__ == datagroup2.__class__):
             return type(datagroup1)(datagroup1.list, api).extend(datagroup2, duplicates)
+
+
+    def intersect(self, datagroup, newDataGroup=False):
+        self.api.logThis("Attempting to intersect a " + self.__class__.__name__[1:], self.api.LOG_MEDDETAIL)
+        if(isinstance(datagroup, self.__class__)):
+            return type(self)([thing for thing in self._things if thing in datagroup], self.api)
         else:
-            api.logWarning("Cannot unionize two datagroups with different class types")
+            self.api.logWarning("Could not intersect the given datagroup because of conflicting classes, skipping", self.api.LOG_LOWDETAIL)
+            return type(self)([], self.api)
 
 
     def filterAttribute(self, attribute, value):
@@ -124,7 +135,7 @@ class _DataGroup(object):
         return type(self)(newlist, self.api)
     
 
-    def deepFilterAttributes(self, attributes, value):
+"""    def deepFilterAttributes(self, attributes, value):
         '''Filters all objects in this DataGroup by filtering the attributes given from a list of attributes (If given ["cluster", "work"] it will check if object->attributes->cluster->work equals the given value)'''
 
         self.api.logThis("Deep filtering " + self.__class__.__name__[1:], self.api.LOG_MEDDETAIL)
@@ -137,14 +148,14 @@ class _DataGroup(object):
                 if(attr not in filterList):
                     self.api.logWarning("the attribute [" + str(attr) + "] could not be found, skipping this element of the list", self.api.LOG_HIGHDETAIL)
                     success = False
-                    #print("Failed")
+                    #print("Failed")    
                     break
                 filterList=filterList[attr]
             if(success and filterList == value):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Deep filtering for the value [" + str(value) + "] yielded no results", self.api.LOG_LOWDETAIL)
-        return type(self)(newlist, self.api)
+        return type(self)(newlist, self.api)"""
     
 
     def advancedFilter(self, filterFunc):
@@ -157,11 +168,6 @@ class _DataGroup(object):
         if len(newlist) == 0:
             self.api.logWarning("Advanced filtering yielded no results", self.api.LOG_LOWDETAIL)
         return type(self)(newlist, self.api)
-
-    
-    @property
-    def list(self):
-        return [x for x in self._things]
 
 
 class _AuthorGroup(_DataGroup):
@@ -903,6 +909,37 @@ class SpeechCluster(object):
         
         if 'id' in data:
             self.id = data['id']
+        if 'type' in data:
+            self.type = data['type']
+        if 'work' in data:
+            if self.index:
+                self.work = self.api.indexedWork(data['work'])
+            else:
+                self.work = Work(data['work'], api=self.api)
+            data['work'] = self.work
+
+    
+    def countReplies(self):
+        speeches = self.api.getSpeeches(cluster_id=self.id)
+        replies = 0
+        addresseeList = []
+        for speech in speeches:
+            if any(responder in speech.spkr for responder in addresseeList):
+                replies += 1
+            addresseeList.extend(speech.spkr)
+            addresseeList = list(set(addresseeList))
+        return replies
+    
+
+    def countInterruptions(self):
+        speeches = self.api.getSpeeches(cluster_id=self.id)
+        interruptions = 0
+        prevAddr = []
+        for speech in speeches:
+            if not any(responder in speech.spkr for responder in prevAddr):
+                interruptions += 1
+            prevAddr = speech.addr
+        return interruptions
 
 
 class _SpeechGroup(_DataGroup):
@@ -939,6 +976,14 @@ class _SpeechGroup(_DataGroup):
     def get_L_LAs(self):
         '''Returns a list of Speech Last Line's'''
         return [x.l_la for x in self._things]
+    
+
+    def isCluster(self, clusterID):
+        clusters = self.getClusters()
+        for thing in clusters:
+            if(thing.id != clusterID):
+                return False
+        return True
     
 
     def getSpkrs(self, flatten=True):
@@ -1227,6 +1272,20 @@ class Speech(object):
         cts = resolver.getTextualNode(self.work.urn, self.l_range)
 
         return cts
+
+
+    def isRepliedTo(self):
+        SpeechesInCluster = self.api.getSpeeches(cluster_id=self.cluster.id)
+        for thing in SpeechesInCluster:
+            if(thing.seq > self.seq):
+                if(any(responder in thing.spkr for responder in self.addr)):
+                    return True
+        return False
+
+    
+    def isInterrupted(self):
+        speech = [speechs for speechs in self.api.getSpeeches(cluster_id=self.cluster.id) if speechs.seq == self.seq + 1]
+        return len(speech) > 0 and any(responder in speech[0].spkr for responder in self.addr)
 
 
 class DicesAPI(object):

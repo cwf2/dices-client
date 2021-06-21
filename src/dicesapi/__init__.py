@@ -134,8 +134,8 @@ class _DataGroup(object):
             self.api.logWarning("Filtering on attribute [" + str(attribute) + "] yielded no results", self.api.LOG_LOWDETAIL)
         return type(self)(newlist, self.api)
     
-
-"""    def deepFilterAttributes(self, attributes, value):
+    """
+    def deepFilterAttributes(self, attributes, value):
         '''Filters all objects in this DataGroup by filtering the attributes given from a list of attributes (If given ["cluster", "work"] it will check if object->attributes->cluster->work equals the given value)'''
 
         self.api.logThis("Deep filtering " + self.__class__.__name__[1:], self.api.LOG_MEDDETAIL)
@@ -157,7 +157,7 @@ class _DataGroup(object):
             self.api.logWarning("Deep filtering for the value [" + str(value) + "] yielded no results", self.api.LOG_LOWDETAIL)
         return type(self)(newlist, self.api)"""
     
-
+    
     def advancedFilter(self, filterFunc):
 
         self.api.logThis("Advanced filtering " + self.__class__.__name__[1:], self.api.LOG_MEDDETAIL)
@@ -386,6 +386,7 @@ class Work(object):
         self.wd = None
         self.urn = None
         self.author = None
+        self.lang = None
         self._attributes = data
 
         if data:
@@ -403,6 +404,8 @@ class Work(object):
             self.wd = data['wd']
         if 'urn' in data:
             self.urn = data['urn']
+        if 'lang' in data:
+            self.lang = data['lang']
         if 'author' in data:
             if self.index:
                 self.author = self.api.indexedAuthor(data['author'])

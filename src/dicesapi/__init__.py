@@ -778,7 +778,7 @@ class _CharacterInstanceGroup(_DataGroup):
         self.api.logThis("Filtering " + self.__class__.__name__[1:] + " along Number's", self.api.LOG_MEDDETAIL)
         newlist = []
         for thing in self._things:
-            if( (thing is not None or (thing is None and incl_none)) and thing.number is not None and thing.number in number ):
+            if( (thing is not None or (thing is None and incl_none)) and thing.number is not None and thing.number in numbers):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " Number's returned no entries", self.api.LOG_LOWDETAIL)
@@ -807,6 +807,8 @@ class CharacterInstance(object):
         self.context = None
         self.char = None
         self.disg = None
+        self.number = None
+        self.being = None
         self.anon = None
         self._name = None
         self._being = None

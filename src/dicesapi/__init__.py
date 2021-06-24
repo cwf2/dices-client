@@ -923,28 +923,12 @@ class SpeechCluster(object):
                 self.work = Work(data['work'], api=self.api)
             data['work'] = self.work
 
+    @property
+    def speeches(self):
+        return self.api.getSpeeches(cluster_id=self.id)
     
-    def countReplies(self):
-        speeches = self.api.getSpeeches(cluster_id=self.id)
-        replies = 0
-        addresseeList = []
-        for speech in speeches:
-            if any(responder in speech.spkr for responder in addresseeList):
-                replies += 1
-            addresseeList.extend(speech.spkr)
-            addresseeList = list(set(addresseeList))
-        return replies
-    
-
-    def countInterruptions(self):
-        speeches = self.api.getSpeeches(cluster_id=self.id)
-        interruptions = 0
-        prevAddr = []
-        for speech in speeches:
-            if not any(responder in speech.spkr for responder in prevAddr):
-                interruptions += 1
-            prevAddr = speech.addr
-        return interruptions
+    def countSpeeches(self):
+        return len(self.speeches)
 
 
 class _SpeechGroup(_DataGroup):
@@ -1242,10 +1226,9 @@ class Speech(object):
         auth = self.work.author.name
         work = self.work.title
         l_fi = self.l_fi
-        l_la = self.l_la
+        l_la = self.l_law 
         return f'<Speech: {auth} {work} {l_fi}-{l_la}>'
-    
-        
+
     @property
     def author(self):
         '''shortcut to author (via work)'''

@@ -4,7 +4,7 @@ def filterFunc(thing):
     return any(char.gender == FilterParams.CHARACTER_GENDER_FEMALE for char in thing.spkr) or any(char == FilterParams.CHARACTER_GENDER_FEMALE for char in thing.addr)
 
 
-api = DicesAPI(logfile="Y:/Uni/Research/Forstall/VirtualENVProj/src/SpeechTests/GetAllSpeechesWithFemales.log", logdetail=DicesAPI.LOG_HIGHDETAIL)
+api = DicesAPI()
 
 
 speeches = api.getSpeeches()

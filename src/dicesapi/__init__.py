@@ -169,12 +169,12 @@ class _DataGroup(object):
         return type(self)(newlist, self.api)"""
     
     
-    def advancedFilter(self, filterFunc):
+    def advancedFilter(self, filterFunc, **kwargs):
 
         self.api.logThis("Advanced filtering " + self.__class__.__name__[1:], self.api.LOG_MEDDETAIL)
         newlist = []
         for thing in self._things:
-            if filterFunc(thing):
+            if filterFunc(thing, **kwargs):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Advanced filtering yielded no results", self.api.LOG_LOWDETAIL)
@@ -275,6 +275,9 @@ class Author(object):
         
         if data:
             self._from_data(data)
+
+    def __repr__(self):
+        return f'<Author {self.id}: {self.name}>'
 
     
     def __lt__(self, other):
@@ -430,6 +433,9 @@ class Work(object):
 
         if data:
             self._from_data(data)
+    
+    def __repr__(self):
+        return f'<Work {self.id}: {self.title}>'
     
 
     def __lt__(self, other):
@@ -613,6 +619,10 @@ class Character(object):
         
         if data:
             self._from_data(data)
+
+
+    def __repr__(self):
+        return f'<Character {self.id}: {self.name}>'
 
     
     def __lt__(self, other):
@@ -831,6 +841,13 @@ class CharacterInstance(object):
                                     self.api.LOG_LOWDETAIL)
             raise TypeError
 
+    def __repr__(self):
+        if self.name == self.char.name:
+            name = self.name
+        else:
+            name = f'{self.name}/{self.char.name}'
+        return f'<CharacterInstance {self.id}: {name}>'
+
 
     def _from_data(self, data):
         '''populate attributes from data'''
@@ -912,6 +929,11 @@ class SpeechCluster(object):
                                     self.api.LOG_LOWDETAIL)
             raise TypeError
 
+    def __repr__(self):
+        incipit = self.getFirst()
+        loc = f'{incipit.work.title} {incipit.l_fi} ff.'
+        return f'<SpeechCluster {self.id}: {loc}>'
+
 
     def _from_data(self, data):
         '''populate attributes from data'''
@@ -989,7 +1011,7 @@ class _SpeechGroup(_DataGroup):
 
     def getClusters(self):
         '''Returns a list of Speech Cluster's'''
-        return _SpeechClusterGroup([x.cluster for x in self._things])
+        return _SpeechClusterGroup([x.cluster for x in self._things], api=self.api)
     
 
     def getSeqs(self):
@@ -1264,11 +1286,7 @@ class Speech(object):
 
 
     def __repr__(self):
-        auth = self.work.author.name
-        work = self.work.title
-        l_fi = self.l_fi
-        l_la = self.l_la
-        return f'<Speech: {auth} {work} {l_fi}-{l_la}>'
+        return f'<Speech {self.id}: {self.work.title} {self.l_range}>'
        
         
     def __lt__(self, other):
@@ -1342,7 +1360,8 @@ class DicesAPI(object):
     LOG_NODETAIL=0
 
 
-    def __init__(self, dices_api=DEFAULT_API, cts_api=DEFAULT_CTS, logfile=None, logdetail=LOG_MEDDETAIL):
+    def __init__(self, dices_api=DEFAULT_API, cts_api=DEFAULT_CTS, logfile=None, 
+                    logdetail=LOG_MEDDETAIL, progress_class=None):
         self.API = dices_api
         self.CTS_API = cts_api
         self.log = None
@@ -1350,7 +1369,7 @@ class DicesAPI(object):
         if(logfile is not None):
             self.createLog(logfile)
         self.resolver = HttpCtsResolver(HttpCtsRetriever(self.CTS_API))
-        self._ProgressClass = None
+        self._ProgressClass = progress_class
         self._work_index = {}
         self._author_index = {}
         self._character_index = {}
@@ -1398,6 +1417,9 @@ class DicesAPI(object):
             results.extend(data['results'])
             if pbar is not None:
                 pbar.update(len(results))
+
+        if pbar is not None:
+            pbar.update(len(results))
 
         # check that we got everything
         if len(results) != count:

@@ -78,14 +78,14 @@ class _DataGroup(object):
             self.api.logWarning("Cannot subtract two datagroups of different classes", self.api.LOG_LOWDETAIL)
     
     
-    def sorted(self, reverse=False):
+    def sorted(self, reverse=False, key=None):
         '''Return a copy with items in increasing order'''
-        return type(self)(sorted(self._things, reverse=reverse), self.api)
+        return type(self)(sorted(self._things, reverse=reverse, key=key), self.api)
         
     
-    def sort(self, reverse=False):
+    def sort(self, reverse=False, key=None):
         '''Rearrange items in increasing order'''
-        self._things.sort(reverse=reverse)
+        self._things.sort(reverse=reverse, key=key)
     
     
     @property
@@ -1352,7 +1352,7 @@ class DicesAPI(object):
     '''a connection to the DICES API'''
     
     DEFAULT_API = 'https://fierce-ravine-99183.herokuapp.com/api'
-    DEFAULT_CTS = 'http://cts.perseids.org/api/cts/'
+    DEFAULT_CTS = 'http://scaife-cts.perseus.org/api/cts/'
 
     LOG_HIGHDETAIL=3
     LOG_MEDDETAIL=2

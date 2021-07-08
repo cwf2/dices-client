@@ -842,9 +842,8 @@ class CharacterInstance(object):
             raise TypeError
 
     def __repr__(self):
-        if self.name == self.char.name:
-            name = self.name
-        else:
+        name = self.name
+        if self.char is not None and self.char.name != self.char.name:
             name = f'{self.name}/{self.char.name}'
         return f'<CharacterInstance {self.id}: {name}>'
 
@@ -1045,22 +1044,21 @@ class _SpeechGroup(_DataGroup):
                 for elem in x.spkr:
                     if elem not in newlist:
                         newlist.append(elem)
-            return _CharacterInstanceGroup(newlist, self.api)
         else:
-            return _CharacterInstanceGroup([x.spkr for x in self._things], self.api)
-    
+            newlist = [x.spkr for x in self._things]
+        return _CharacterInstanceGroup(newlist, self.api)
 
     def getAddrs(self, flatten=True):
         '''Returns a list of Speech Addressee's'''
         if flatten:
             newlist = []
-            for elem in self._things:
-                for addr in elem.addr:
-                    newlist.append(addr)
-            return _CharacterInstanceGroup(newlist, self.api)
+            for x in self._things:
+                for elem in x.addr:
+                    if elem not in newlist:
+                        newlist.append(elem)
         else:
-            return _CharacterInstanceGroup([x.addr for x in self._things], self.api)
-    
+            newlist = [x.addr for x in self._things]
+        return _CharacterInstanceGroup(newlist, self.api)
 
     def getParts(self):
         '''Returns a list of Speech Part's'''

@@ -157,4 +157,4 @@ def charIsMantoTie(char_a, char_b, ties, err_val=None, debug=DEBUG):
 
 def charIsChild(char_a, char_b, err_val=None, debug=DEBUG):
     '''True if char_b is one of char_a's parents'''
-    return CharIsMantoTie(char_a, char_b, [Tie.SON, Tie.DAUGHTER], err_val, debug=debug)
+    return charIsMantoTie(char_a, char_b, [Tie.SON, Tie.DAUGHTER], err_val, debug=debug)

@@ -77,6 +77,17 @@ class _DataGroup(object):
         else:
             self.api.logWarning("Cannot subtract two datagroups of different classes", self.api.LOG_LOWDETAIL)
     
+    
+    def sorted(self, reverse=False, key=None):
+        '''Return a copy with items in increasing order'''
+        return type(self)(sorted(self._things, reverse=reverse, key=key), self.api)
+        
+    
+    def sort(self, reverse=False, key=None):
+        '''Rearrange items in increasing order'''
+        self._things.sort(reverse=reverse, key=key)
+    
+    
     @property
     def list(self):
         return [x for x in self._things]
@@ -158,12 +169,12 @@ class _DataGroup(object):
         return type(self)(newlist, self.api)"""
     
     
-    def advancedFilter(self, filterFunc):
+    def advancedFilter(self, filterFunc, **kwargs):
 
         self.api.logThis("Advanced filtering " + self.__class__.__name__[1:], self.api.LOG_MEDDETAIL)
         newlist = []
         for thing in self._things:
-            if filterFunc(thing):
+            if filterFunc(thing, **kwargs):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Advanced filtering yielded no results", self.api.LOG_LOWDETAIL)
@@ -265,6 +276,20 @@ class Author(object):
         if data:
             self._from_data(data)
 
+    def __repr__(self):
+        return f'<Author {self.id}: {self.name}>'
+
+    
+    def __lt__(self, other):
+        '''True if author names in alpha order'''
+        
+        if(isinstance(other, self.__class__)):
+            return self.name < other.name
+        else:
+            self.api.logWarning("Cannot compare objects of different classes", 
+                                    self.api.LOG_LOWDETAIL)
+            raise TypeError
+
 
     def _from_data(self, data):
         '''populate attributes from data dict'''
@@ -309,6 +334,11 @@ class _WorkGroup(_DataGroup):
         '''Returns a list of work Urn's'''
         return [x.urn for x in self._things]
     
+
+    def getLangs(self):
+        '''Returns a list of work Lang's'''
+        return [x.lang for x in self._things]
+
 
     def getAuthors(self):
         '''Returns a list of work Author's'''
@@ -373,6 +403,18 @@ class _WorkGroup(_DataGroup):
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " Author's returned no entries", self.api.LOG_LOWDETAIL)
         return _WorkGroup(newlist, self.api)
+        
+        
+    def filterLangs(self, langs, incl_none=False):
+        '''Filter on the works Lang's'''
+        self.api.logThis("Filtering " + self.__class__.__name__[1:] + " along Lang's", self.api.LOG_MEDDETAIL)
+        newlist = []
+        for thing in self._things:
+            if( (thing is not None or (thing is None and incl_none)) and thing.lang in langs ):
+                newlist.append(thing)
+        if len(newlist) == 0:
+            self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " Lang's returned no entries", self.api.LOG_LOWDETAIL)
+        return _WorkGroup(newlist, self.api)
 
 
 class Work(object):
@@ -392,6 +434,22 @@ class Work(object):
         if data:
             self._from_data(data)
     
+    def __repr__(self):
+        return f'<Work {self.id}: {self.title}>'
+    
+
+    def __lt__(self, other):
+        '''True if author, title in alpha order'''
+        
+        if(isinstance(other, self.__class__)):
+            return (self.author < other.author) or (
+                    (self.author == other.author) and 
+                    (self.title < other.title))
+        else:
+            self.api.logWarning("Cannot compare objects of different classes", 
+                                    self.api.LOG_LOWDETAIL)
+            raise TypeError
+
 
     def _from_data(self, data):
         '''populate attributes from data dict'''
@@ -561,6 +619,21 @@ class Character(object):
         
         if data:
             self._from_data(data)
+
+
+    def __repr__(self):
+        return f'<Character {self.id}: {self.name}>'
+
+    
+    def __lt__(self, other):
+        '''True if names in alpha order'''
+        
+        if(isinstance(other, self.__class__)):
+            return (self.name < other.name)
+        else:
+            self.api.logWarning("Cannot compare objects of different classes", 
+                                    self.api.LOG_LOWDETAIL)
+            raise TypeError
     
 
     def _from_data(self, data):
@@ -755,8 +828,26 @@ class CharacterInstance(object):
 
         if data:
             self._from_data(data)
+
+
+    def __lt__(self, other):
+        '''True if names, char names in alpha order'''
         
-    
+        if(isinstance(other, self.__class__)):
+            return (self.name < other.name) or (
+                self.name == other.name and (self.char < other.char))
+        else:
+            self.api.logWarning("Cannot compare objects of different classes", 
+                                    self.api.LOG_LOWDETAIL)
+            raise TypeError
+
+    def __repr__(self):
+        name = self.name
+        if self.char is not None and self.char.name != self.char.name:
+            name = f'{self.name}/{self.char.name}'
+        return f'<CharacterInstance {self.id}: {name}>'
+
+
     def _from_data(self, data):
         '''populate attributes from data'''
         
@@ -776,96 +867,13 @@ class CharacterInstance(object):
         if 'anon' in data:
             self.anon = data['anon']
         if 'name' in data and data['name'] is not None:
-            self._name = data['name']
+            self.name = data['name']
         if 'being' in data and data['being'] is not None:
-            self._being = data['being']
+            self.being = data['being']
         if 'number' in data and data['number'] is not None:
-            self._number = data['number']
+            self.number = data['number']
         if 'gender' in data and data['gender'] is not None:
-            self._gender = data['gender']
-        
-
-    @property
-    def name(self):
-        '''Get top-level name for the character instance'''
-        
-        if self._name is not None:
-            name = self._name
-        elif self.disg is not None:
-            if isinstance(self.disg, Character):
-                name = self.disg.name
-            else:
-                name = self.disg
-        else:
-            name = self.char.name
-        
-        return name
-
-
-    @name.setter
-    def name(self, new_name):
-        '''Set instance-level name'''
-        self._name = new_name
-        
-
-    @name.deleter
-    def name(self):
-        '''Remove instance-level name'''
-        self._name = None
-
-
-    @property
-    def being(self):
-        '''Get top-level gender for character instance'''
-        return self._being or self.char.being
-    
-
-    @being.setter
-    def being(self, new_being):
-        '''Set instance-level being'''
-        self._being = new_being
-        
-
-    @being.deleter
-    def being(self):
-        '''Remove instance-level being'''
-        self._being = None
-    
-
-    @property
-    def number(self):
-        '''Get top-level number for character instance'''
-        return self._number or self.char.number
-
-
-    @number.setter
-    def number(self, new_number):
-        '''Set instance-level number'''
-        self._number = new_number
-        
-
-    @number.deleter
-    def number(self):
-        '''Remove instance-level number'''
-        self._number = None
-
-
-    @property
-    def gender(self):
-        '''Get top-level gender for character instance'''
-        return self._gender or self.char.gender
-
-
-    @gender.setter
-    def gender(self, new_gender):
-        '''Set instance-level gender'''
-        self._gender = new_gender
-        
-
-    @gender.deleter
-    def gender(self):
-        '''Remove instance-level gender'''
-        self._gender = None
+            self.gender = data['gender']
 
 
 class _SpeechClusterGroup(_DataGroup):
@@ -904,9 +912,26 @@ class SpeechCluster(object):
         self.index = (api is not None and index is not None)        
         self.id = None
         self._attributes = data
+        self._first = None
         
         if data:
             self._from_data(data)
+
+
+    def __lt__(self, other):
+        '''True if initial speeches in seq order'''
+        
+        if(isinstance(other, self.__class__)):
+            return self.getFirst().seq < other.getFirst().seq
+        else:
+            self.api.logWarning("Cannot compare objects of different classes", 
+                                    self.api.LOG_LOWDETAIL)
+            raise TypeError
+
+    def __repr__(self):
+        incipit = self.getFirst()
+        loc = f'{incipit.work.title} {incipit.l_fi} ff.'
+        return f'<SpeechCluster {self.id}: {loc}>'
 
 
     def _from_data(self, data):
@@ -929,6 +954,49 @@ class SpeechCluster(object):
     
     def countSpeeches(self):
         return len(self.speeches)
+    
+
+    def getFirst(self):
+        '''Return first speech of the cluster'''
+        
+        if self._first is None:
+            sgroup = self.api.getSpeeches(cluster_id=self.id)
+            if len(sgroup) < 1:
+                self.api.logWarning(f'API returned no speeches for cluster '
+                                    f'{self.id}',
+                                     self.api.LOG_LOWDETAIL)
+                raise Exception # FIXME
+            else:
+                self._first = sorted(sgroup._things, key=lambda s: s.part)[0]
+                if self._first.part != 1:
+                    self.api.logWarning(f'First speech in cluster {self.id} '
+                                        f'has part {self._first.part}',
+                                         self.api.LOG_LOWDETAIL)
+        
+        return self._first
+
+
+    def countReplies(self):
+        speeches = self.api.getSpeeches(cluster_id=self.id)
+        replies = 0
+        addresseeList = []
+        for speech in speeches:
+            if any(responder in speech.spkr for responder in addresseeList):
+                replies += 1
+            addresseeList.extend(speech.spkr)
+            addresseeList = list(set(addresseeList))
+        return replies
+    
+
+    def countInterruptions(self):
+        speeches = self.api.getSpeeches(cluster_id=self.id)
+        interruptions = 0
+        prevAddr = []
+        for speech in speeches:
+            if not any(responder in speech.spkr for responder in prevAddr):
+                interruptions += 1
+            prevAddr = speech.addr
+        return interruptions
 
 
 class _SpeechGroup(_DataGroup):
@@ -949,7 +1017,7 @@ class _SpeechGroup(_DataGroup):
 
     def getClusters(self):
         '''Returns a list of Speech Cluster's'''
-        return _SpeechClusterGroup([x.cluster for x in self._things])
+        return _SpeechClusterGroup([x.cluster for x in self._things], api=self.api)
     
 
     def getSeqs(self):
@@ -983,22 +1051,21 @@ class _SpeechGroup(_DataGroup):
                 for elem in x.spkr:
                     if elem not in newlist:
                         newlist.append(elem)
-            return _CharacterInstanceGroup(newlist, self.api)
         else:
-            return _CharacterInstanceGroup([x.spkr for x in self._things], self.api)
-    
+            newlist = [x.spkr for x in self._things]
+        return _CharacterInstanceGroup(newlist, self.api)
 
     def getAddrs(self, flatten=True):
         '''Returns a list of Speech Addressee's'''
         if flatten:
             newlist = []
-            for elem in self._things:
-                for addr in elem.addr:
-                    newlist.append(addr)
-            return _CharacterInstanceGroup(newlist, self.api)
+            for x in self._things:
+                for elem in x.addr:
+                    if elem not in newlist:
+                        newlist.append(elem)
         else:
-            return _CharacterInstanceGroup([x.addr for x in self._things], self.api)
-    
+            newlist = [x.addr for x in self._things]
+        return _CharacterInstanceGroup(newlist, self.api)
 
     def getParts(self):
         '''Returns a list of Speech Part's'''
@@ -1188,10 +1255,9 @@ class Speech(object):
         if 'id' in data:
             self.id = data['id']
         if 'cluster' in data:
-            if self.index:
-                self.cluster = self.api.indexedSpeechCluster(data['cluster'])
-            else:
-                self.cluster = SpeechCluster(data['cluster'], api=self.api)
+            self.cluster = self.api.indexedSpeechCluster(data['cluster'])
+        else:
+            self.cluster = SpeechCluster(data['cluster'], api=self.api)
             data['cluster'] = self.cluster
         if 'seq' in data:
             self.seq = data['seq']
@@ -1222,13 +1288,23 @@ class Speech(object):
         if 'work' in data:
             self.work = self.api.indexedWork(data['work'])
 
-    def __repr__(self):
-        auth = self.work.author.name
-        work = self.work.title
-        l_fi = self.l_fi
-        l_la = self.l_law 
-        return f'<Speech: {auth} {work} {l_fi}-{l_la}>'
 
+    def __repr__(self):
+        return f'<Speech {self.id}: {self.work.title} {self.l_range}>'
+       
+        
+    def __lt__(self, other):
+        '''True if in seq order'''
+        
+        if(isinstance(other, self.__class__)):
+            return (self.work < other.work) or (
+                (self.work == other.work) and (self.seq < other.seq))
+        else:
+            self.api.logWarning("Cannot compare objects of different classes", 
+                                    self.api.LOG_LOWDETAIL)
+            raise TypeError
+        
+        
     @property
     def author(self):
         '''shortcut to author (via work)'''
@@ -1284,7 +1360,7 @@ class DicesAPI(object):
     '''a connection to the DICES API'''
     
     DEFAULT_API = 'https://fierce-ravine-99183.herokuapp.com/api'
-    DEFAULT_CTS = 'http://cts.perseids.org/api/cts/'
+    DEFAULT_CTS = 'https://scaife-cts.perseus.org/api/cts'
 
     LOG_HIGHDETAIL=3
     LOG_MEDDETAIL=2
@@ -1292,7 +1368,8 @@ class DicesAPI(object):
     LOG_NODETAIL=0
 
 
-    def __init__(self, dices_api=DEFAULT_API, cts_api=DEFAULT_CTS, logfile=None, logdetail=LOG_MEDDETAIL):
+    def __init__(self, dices_api=DEFAULT_API, cts_api=DEFAULT_CTS, logfile=None, 
+                    logdetail=LOG_MEDDETAIL, progress_class=None):
         self.API = dices_api
         self.CTS_API = cts_api
         self.log = None
@@ -1300,7 +1377,7 @@ class DicesAPI(object):
         if(logfile is not None):
             self.createLog(logfile)
         self.resolver = HttpCtsResolver(HttpCtsRetriever(self.CTS_API))
-        self._ProgressClass = None
+        self._ProgressClass = progress_class
         self._work_index = {}
         self._author_index = {}
         self._character_index = {}
@@ -1348,6 +1425,9 @@ class DicesAPI(object):
             results.extend(data['results'])
             if pbar is not None:
                 pbar.update(len(results))
+
+        if pbar is not None:
+            pbar.update(len(results))
 
         # check that we got everything
         if len(results) != count:

@@ -97,6 +97,21 @@ class Metrics(object):
                 return False
         return True
 
+    def doesInterruption(self, cluster, character):
+        self.api.logThis("Checking if speaker interrupts")
+        if not isinstance(cluster, dicesapi.SpeechCluster):
+            self.api.logCritical("Could not check if speaker interrupts as a SpeechCluster was not provided", dicesapi.DicesAPI.LOG_LOWDETAIL)
+            return self.ERROR_VALUE
+        if not isinstance(character, dicesapi.CharacterInstance):
+            self.api.logCritical("Could not check if speaker interrupts as a Character Instance was not provided", dicesapi.DicesAPI.LOG_LOWDETAIL)
+            return self.ERROR_VALUE
+        speeches = self.api.getSpeeches(cluster_id=cluster.id)
+        for speech in speeches:
+            if character in speech.spkr and speech.isInterruption():
+                return True
+        return False
+
+        
 
     #Float Values
 

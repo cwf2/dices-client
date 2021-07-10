@@ -1274,6 +1274,10 @@ class Speech(object):
     def isInterrupted(self):
         speech = [speechs for speechs in self.api.getSpeeches(cluster_id=self.cluster.id) if speechs.seq == self.seq + 1]
         return len(speech) > 0 and any(responder in speech[0].spkr for responder in self.addr)
+    
+    def isInterruption(self):
+        speech = [speechs for speechs in self.api.getSpeeches(cluster_id=self.cluster.id) if speechs.seq == self.seq - 1]
+        return len(speech) > 0 and any(talker in speech[0].addr for talker in self.spkr)
 
 
 class DicesAPI(object):

@@ -3,6 +3,7 @@ from MyCapytain.resolvers.cts.api import HttpCtsResolver
 from MyCapytain.retrievers.cts5 import HttpCtsRetriever
 import logging
 import csv
+import re
 
 class FilterParams(object):
 
@@ -189,22 +190,26 @@ class _DataGroup(object):
             for val in thing._attributes.keys():
                 if val not in h:
                     h.append(val)
+        h.append("API Hash")
         return h
 
     def __serialize__(self, headers):
         rows = []
-        self.api.logThis("Serializing a " + self.__class__.__name__[1:] + " with " + str(len(headers)) + " headers", self.api.LOG_HIGHDETAIL)
+        self.api.logThis("Serializing a " + self.__class__.__name__[1:] + " with " + str(len(headers)) + " headers", self.api.LOG_MEDDETAIL)
         for i, thing in enumerate(self):
             rows.append([])
             for key in headers:
-                if key in thing._attributes:
+                if key == "API Hash":
+                    continue
+                if key in thing._attributes and (thing._attributes[key] is None or not str(thing._attributes[key]).isspace()):
                     rows[i].append(thing._attributes[key])
                 else:
                     rows[i].append("N/A")
+            rows[i].append(self.api.version)
         return rows
 
     def ExportToCSV(self, filePath):
-        with open(filePath, 'w', encoding='UTF8', newline='') as f:
+        with open(filePath, 'w', newline='') as f:
             writer = csv.writer(f)
             headers = self.__headers__
             writer.writerow(headers)
@@ -1421,6 +1426,7 @@ class DicesAPI(object):
         self._characterinstance_index = {}
         self._speech_index = {}
         self._speechcluster_index = {}
+        self.version = "DEBUG VERSION 1.0"
         self.logThis("Database Initialized", self.LOG_NODETAIL)
 
 

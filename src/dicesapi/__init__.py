@@ -2,6 +2,8 @@ import requests
 from MyCapytain.resolvers.cts.api import HttpCtsResolver
 from MyCapytain.retrievers.cts5 import HttpCtsRetriever
 import logging
+import csv
+import re
 
 class FilterParams(object):
 
@@ -27,6 +29,7 @@ class FilterParams(object):
 class _DataGroup(object):
     '''Parent class for all DataGroups used to hold objects from the API'''
 
+    PREDEF_HEADERS = []
     def __init__(self, things=None, api=None):
         self._things=things
         if api is None:
@@ -179,10 +182,45 @@ class _DataGroup(object):
         if len(newlist) == 0:
             self.api.logWarning("Advanced filtering yielded no results", self.api.LOG_LOWDETAIL)
         return type(self)(newlist, self.api)
+    
+    @property
+    def __headers__(self):
+        h = self.PREDEF_HEADERS
+        for thing in self:
+            for val in thing._attributes.keys():
+                if val not in h:
+                    h.append(val)
+        h.append("API Hash")
+        return h
+
+    def __serialize__(self, headers):
+        rows = []
+        self.api.logThis("Serializing a " + self.__class__.__name__[1:] + " with " + str(len(headers)) + " headers", self.api.LOG_MEDDETAIL)
+        for i, thing in enumerate(self):
+            rows.append([])
+            for key in headers:
+                if key == "API Hash":
+                    continue
+                if key in thing._attributes and (thing._attributes[key] is None or not str(thing._attributes[key]).isspace()):
+                    rows[i].append(thing._attributes[key])
+                else:
+                    rows[i].append("N/A")
+            rows[i].append(self.api.version)
+        return rows
+
+    def ExportToCSV(self, filePath):
+        with open(filePath, 'w', newline='') as f:
+            writer = csv.writer(f)
+            headers = self.__headers__
+            writer.writerow(headers)
+            writer.writerows(self.__serialize__(headers))
+            self.api.logThis("A " + self.__class__.__name__[1:] + " has been exported to a CSV file at the path " + filePath, self.api.LOG_LOWDETAIL)
+        
 
 
 class _AuthorGroup(_DataGroup):
     '''Datagroup used to hold a list of Authors'''
+    PREDEF_HEADERS = ["name"]
 
     def __init__(self, things=None, api=None):
         self._things = things
@@ -210,6 +248,9 @@ class _AuthorGroup(_DataGroup):
     def getUrns(self):
         '''Returns a list of author Urn's'''
         return [x.urn for x in self._things]
+            
+
+
 
 
     def filterNames(self, names, incl_none=False):
@@ -416,7 +457,6 @@ class _WorkGroup(_DataGroup):
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " Lang's returned no entries", self.api.LOG_LOWDETAIL)
         return _WorkGroup(newlist, self.api)
 
-
 class Work(object):
     '''An epic poem'''
 
@@ -475,6 +515,7 @@ class Work(object):
 class _CharacterGroup(_DataGroup):
     '''Datagroup used to hold a list of Characters'''
     
+    PREDEF_HEADERS = ["name"]
     def __init__(self, things=None, api=None):
         self._things = things
         if api is None:
@@ -658,6 +699,7 @@ class Character(object):
 class _CharacterInstanceGroup(_DataGroup):
     '''Datagroup used to hold a list of Character Instances'''
 
+    PREDEF_HEADERS = ["name"]
     def __init__(self, things=None, api=None):
         self._things = things
         if api is None:
@@ -947,6 +989,13 @@ class SpeechCluster(object):
             else:
                 self.work = Work(data['work'], api=self.api)
             data['work'] = self.work
+
+    @property
+    def speeches(self):
+        return self.api.getSpeeches(cluster_id=self.id)
+    
+    def countSpeeches(self):
+        return len(self.speeches)
     
 
     def getFirst(self):
@@ -1248,10 +1297,9 @@ class Speech(object):
         if 'id' in data:
             self.id = data['id']
         if 'cluster' in data:
-            if self.index:
-                self.cluster = self.api.indexedSpeechCluster(data['cluster'])
-            else:
-                self.cluster = SpeechCluster(data['cluster'], api=self.api)
+            self.cluster = self.api.indexedSpeechCluster(data['cluster'])
+        else:
+            self.cluster = SpeechCluster(data['cluster'], api=self.api)
             data['cluster'] = self.cluster
         if 'seq' in data:
             self.seq = data['seq']
@@ -1344,6 +1392,10 @@ class Speech(object):
     def isInterrupted(self):
         speech = [speechs for speechs in self.api.getSpeeches(cluster_id=self.cluster.id) if speechs.seq == self.seq + 1]
         return len(speech) > 0 and any(responder in speech[0].spkr for responder in self.addr)
+    
+    def isInterruption(self):
+        speech = [speechs for speechs in self.api.getSpeeches(cluster_id=self.cluster.id) if speechs.seq == self.seq - 1]
+        return len(speech) > 0 and any(talker in speech[0].addr for talker in self.spkr)
 
 
 class DicesAPI(object):
@@ -1374,6 +1426,7 @@ class DicesAPI(object):
         self._characterinstance_index = {}
         self._speech_index = {}
         self._speechcluster_index = {}
+        self.version = "DEBUG VERSION 1.0"
         self.logThis("Database Initialized", self.LOG_NODETAIL)
 
 

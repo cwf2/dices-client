@@ -1,0 +1,7 @@
+2021-06-07 15:35:38,982 - [DEBUG] New log created with Medium Detail
+2021-06-07 15:35:38,982 - [DEBUG] Database Initialized
+2021-06-07 15:35:38,982 - [DEBUG] Attempting to fetch a SpeechGroup
+2021-06-07 15:35:38,982 - [DEBUG] Retrieving data from the database
+2021-06-07 15:41:20,452 - [DEBUG] Successfully fetched data from the database
+2021-06-07 15:41:20,468 - [DEBUG] Successfully retrieved a list of speeches
+2021-06-07 15:41:20,468 - [DEBUG] Advanced filtering SpeechGroup

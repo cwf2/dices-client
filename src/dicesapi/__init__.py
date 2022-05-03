@@ -1,4 +1,5 @@
 import requests
+import sys
 from MyCapytain.resolvers.cts.api import HttpCtsResolver
 from MyCapytain.retrievers.cts5 import HttpCtsRetriever
 import logging
@@ -1516,23 +1517,36 @@ class DicesAPI(object):
 
 
     def logThis(self, message, priority):
-        if self.log and priority <= self.logdetail:
-            self.log.debug(message)
+        if priority <= self.logdetail:
+            if self.log:
+                self.log.debug(message)
+            else:
+                sys.stderr.write("[GENE]" + message)
+
 
         
     def logWarning(self, message, priority):
-        if self.log and priority <= self.logdetail:
-            self.log.warning(message)
+        if priority <= self.logdetail:
+            if self.log:
+                self.log.warning(message)
+            else:
+                sys.stderr.write("[WARNING]" + message)
 
     
     def logError(self, message, priority):
-        if self.log and priority <= self.logdetail:
-            self.log.error(message)
+        if priority <= self.logdetail:
+            if self.log:
+                self.log.error(message)
+            else:
+                sys.stderr.write("[ERROR]" + message)
 
     
     def logCritical(self, message, priority):
-        if self.log and priority <= self.logdetail:
-            self.log.critical(message)
+        if priority <= self.logdetail:
+            if self.log:
+                self.log.critical(message)
+            else:
+                sys.stderr.write("[CRITICAL]" + message)
 
         
     def getSpeeches(self, progress=False, **kwargs):

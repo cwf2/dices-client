@@ -31,12 +31,11 @@ class _DataGroup(object):
     def __init__(self, things=None, api=None):
         """
         The __init__ function is called when a new object is created from the class.
-        The init function can take arguments, but self is always the first one. 
         Self is a reference to the instance of the class. It binds the attributes with 
         the given arguments.
         
         :param self: Refer to the object itself
-        :param things=None: Create a datagroup object without any things
+        :param things=None: Things is a dictionary that is used to store info on the objects in the DataGroup
         :param api=None: Pass the api object to the class
         :return: A datagroup object
         :doc-author: Trelent
@@ -63,14 +62,41 @@ class _DataGroup(object):
     
 
     def __getitem__(self, key):
+        """
+        The __getitem__ function is called when you use a class instance in a context
+        that expects an iterable (e.g., for loops). The __getitem__ function allows you to define what elements should be returned 
+        when your class is used in this way.
+        
+        :param self: Refer to the instance of the class
+        :param key: Access the key value pairs in the dictionary
+        :return: The value of the item at the specified key
+        :doc-author: Trelent
+        """
         return self._things[key]
     
 
     def __len__(self):
+        """
+        The __len__ function is called when you use the built-in len() function. 
+        It should return an integer representing the length of the object. 
+        
+        :param self: Refer to the object itself
+        :return: The length of the list
+        :doc-author: Trelent
+        """
         return len(self._things)
 
 
     def __iadd__(self, other):
+        """
+        The __iadd__ function is called when the += operator is used. It will add all of the elements in other to self, but will not create a new instance of self as __add__ would.
+        This function is only called if other can be added to this object.
+        
+        :param self: Refer to the current instance of the class, and is used to access variables that belongs to the class
+        :param other: Check if the other object is of the same type
+        :return: The current object
+        :doc-author: Trelent
+        """
         if(isinstance(other, self.__class__)):
             self.extend(other, False)
         else:
@@ -78,6 +104,14 @@ class _DataGroup(object):
     
 
     def __add__(self, other):
+        """
+        The __add__ function allows you to add two things together.
+        
+        :param self: Refer to the object itself, which is used as a way of accessing its own attributes
+        :param other: Add an item to the list
+        :return: A new object of the same type
+        :doc-author: Trelent
+        """
         if(isinstance(other, self.__class__)):
             thing = type(self)([x for x in self._things], self.api)
             thing.extend(other)
@@ -87,6 +121,18 @@ class _DataGroup(object):
     
 
     def __isub__(self, other):
+        """
+        The __isub__ function removes all elements from the set that are in other.
+        
+        Parameters: 
+        other (set): The set to remove elements from this set. 
+        
+        
+        :param self: Refer to the object that is calling the function
+        :param other: Check if the other object is of the same type
+        :return: The object itself
+        :doc-author: Trelent
+        """
         if(isinstance(other, self.__class__)):
             self._things = [thing for thing in self._things if thing not in other._things] 
         else:
@@ -94,6 +140,16 @@ class _DataGroup(object):
     
 
     def __sub__(self, other):
+        """
+        The __sub__ function allows for the subtraction of two objects. 
+        If the other object is an instance of this class, it will return a new object containing all items in self that are not in other.
+        If the other object is not an instance of this class, it will raise a TypeError.
+        
+        :param self: Refer to the object itself
+        :param other: Check if the other parameter is an instance of the class
+        :return: A new object of the same type that contains all elements from the calling object except those in other
+        :doc-author: Trelent
+        """
         if(isinstance(other, self.__class__)):
             return type(self)([thing for thing in self._things if thing not in other._things], self.api)
         else:
@@ -101,17 +157,52 @@ class _DataGroup(object):
     
     
     def sorted(self, reverse=False, key=None):
+        """
+        The sorted function returns a sorted list from the items in an iterable.
+        The default is to sort the items in ascending order. If you pass True
+        for reverse, you can get descending order. You can also pass a key parameter
+        to customize how you want the sorting done.
+        
+        :param self: Reference the object that is calling the function
+        :param reverse=False: Specify whether to sort the list in increasing or decreasing order
+        :param key=None: Specify a function that takes an item and returns the key to be used in sorting
+        :return: A list of the items in a sequence, sorted
+        :doc-author: Trelent
+        """
         '''Return a copy with items in increasing order'''
         return type(self)(sorted(self._things, reverse=reverse, key=key), self.api)
         
     
     def sort(self, reverse=False, key=None):
+        """
+        The sort function rearranges items in increasing order.
+        
+        Parameters:
+        reverse (bool): If True, then items are arranged in decreasing order. Default is False.
+        key (lambda): A function that takes one argument and returns a value to be used for sorting purposes.  Default is None.
+        
+        :param self: Reference the object itself
+        :param reverse=False: Specify whether to sort in increasing order or decreasing order
+        :param key=None: Specify a function to be called on each list element prior to making comparisons
+        :return: The sorted list
+        :doc-author: Trelent
+        """
         '''Rearrange items in increasing order'''
         self._things.sort(reverse=reverse, key=key)
     
     
     @property
     def list(self):
+        """
+        The list function returns a list of all the items in the database.
+        
+        Returns:
+            A list of all items in the database.  The returned objects are dictionaries with three keys: id, name, and type.
+        
+        :param self: Reference the object itself
+        :return: A list of the values in a dictionary
+        :doc-author: Trelent
+        """
         return [x for x in self._things]
 
 

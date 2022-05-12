@@ -912,6 +912,7 @@ class SpeechCluster(object):
         self.api = api
         self.index = (api is not None and index is not None)        
         self.id = None
+        self.type = None
         self._attributes = data
         self._first = None
         
@@ -1256,10 +1257,11 @@ class Speech(object):
         if 'id' in data:
             self.id = data['id']
         if 'cluster' in data:
-            self.cluster = self.api.indexedSpeechCluster(data['cluster'])
-        else:
-            self.cluster = SpeechCluster(data['cluster'], api=self.api)
-            data['cluster'] = self.cluster
+            if self.index:
+                self.cluster = self.api.indexedSpeechCluster(data['cluster'])
+            else:
+                self.cluster = SpeechCluster(data['cluster'], api=self.api)
+                data['cluster'] = self.cluster
         if 'seq' in data:
             self.seq = data['seq']
         if 'l_fi' in data:

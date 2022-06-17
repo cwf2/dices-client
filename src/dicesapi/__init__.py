@@ -75,7 +75,12 @@ class _DataGroup(object):
         :return: The value of the item at the specified key
         :doc-author: Trelent
         """
-        return self._things[key]
+        
+        if isinstance(key, slice):
+            return type(self)(self._things[key], api=self.api)
+
+        else:
+            return self._things[key]
     
 
     def __len__(self):
@@ -1978,9 +1983,20 @@ class Speech(object):
         :doc-author: Trelent
         """
         '''Get the CTS passage corresponding to the speech'''
-                
+        
+        # bail out if work has no urn
+        if (self.work.urn == '') or (self.work.urn is None):
+            return None
+        
+        # otherwise, try to download
         resolver = self.api.resolver
-        cts = resolver.getTextualNode(self.work.urn, self.l_range)
+
+        try:
+            cts = resolver.getTextualNode(self.work.urn, self.l_range)
+
+        except requests.exceptions.HTTPError as e:
+            self.api.logWarning("Failed to download self.urn: " + str(e), self.api.LOG_LOWDETAIL)
+            cts = None
 
         return cts
 
@@ -2021,7 +2037,7 @@ class Speech(object):
 class DicesAPI(object):
     '''a connection to the DICES API'''
     
-    DEFAULT_API = 'https://fierce-ravine-99183.herokuapp.com/api'
+    DEFAULT_API = 'http://csa20211203-005.uni-rostock.de/api/'
     DEFAULT_CTS = 'https://scaife-cts.perseus.org/api/cts'
 
     LOG_HIGHDETAIL=3

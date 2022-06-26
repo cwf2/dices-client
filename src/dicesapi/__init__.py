@@ -32,17 +32,16 @@ class _DataGroup(object):
 
     PREDEF_HEADERS = []
     def __init__(self, things=None, api=None):
-        """
-        The __init__ function is called when a new object is created from the class.
-        Self is a reference to the instance of the class. It binds the attributes with 
-        the given arguments.
+        """Creates a new _DataGroup
         
-        :param self: Refer to the object itself
-        :param things=None: Things is a dictionary that is used to store info on the objects in the DataGroup
-        :param api=None: Pass the api object to the class
-        :return: A datagroup object
-        :doc-author: Trelent
+        Args:
+            things (list): Things is a dictionary that is used to store info on the objects in the DataGroup
+            api (DicesAPI): The api object attached to the class
+        
+        Returns:
+            A datagroup object
         """
+        
         self._things=things
         if api is None:
             print("Could not create a datagroup with no API, exiting")
@@ -51,31 +50,11 @@ class _DataGroup(object):
     
 
     def __iter__(self):
-        """
-        The __iter__ function is called when an iterator is required for a container. 
-        This method should return a new iterator object that can iterate over all the objects in the container, 
-        such as lists and tuples.
-        
-        :param self: Refer to the instance of the object
-        :return: An iterator object
-        :doc-author: Trelent
-        """
         for x in self._things:
             yield x
     
 
     def __getitem__(self, key):
-        """
-        The __getitem__ function is called when you use a class instance in a context
-        that expects an iterable (e.g., for loops). The __getitem__ function allows you to define what elements should be returned 
-        when your class is used in this way.
-        
-        :param self: Refer to the instance of the class
-        :param key: Access the key value pairs in the dictionary
-        :return: The value of the item at the specified key
-        :doc-author: Trelent
-        """
-        
         if isinstance(key, slice):
             return type(self)(self._things[key], api=self.api)
 
@@ -84,27 +63,14 @@ class _DataGroup(object):
     
 
     def __len__(self):
-        """
-        The __len__ function is called when you use the built-in len() function. 
-        It should return an integer representing the length of the object. 
-        
-        :param self: Refer to the object itself
-        :return: The length of the list
-        :doc-author: Trelent
-        """
         return len(self._things)
 
 
     def __iadd__(self, other):
-        """
-        The __iadd__ function is called when the += operator is used. It will add all of the elements in other to self, but will not create a new instance of self as __add__ would.
-        This function is only called if other can be added to this object.
+        '''Add the contents of other to self
         
-        :param self: Refer to the current instance of the class, and is used to access variables that belongs to the class
-        :param other: Check if the other object is of the same type
-        :return: The current object
-        :doc-author: Trelent
-        """
+        Alias for self.extend(other)
+        '''
         if(isinstance(other, self.__class__)):
             self.extend(other, False)
         else:
@@ -112,14 +78,6 @@ class _DataGroup(object):
     
 
     def __add__(self, other):
-        """
-        The __add__ function allows you to add two things together.
-        
-        :param self: Refer to the object itself, which is used as a way of accessing its own attributes
-        :param other: Add an item to the list
-        :return: A new object of the same type
-        :doc-author: Trelent
-        """
         if(isinstance(other, self.__class__)):
             thing = type(self)([x for x in self._things], self.api)
             thing.extend(other)
@@ -129,18 +87,6 @@ class _DataGroup(object):
     
 
     def __isub__(self, other):
-        """
-        The __isub__ function removes all elements from the set that are in other.
-        
-        Parameters: 
-        other (set): The set to remove elements from this set. 
-        
-        
-        :param self: Refer to the object that is calling the function
-        :param other: Check if the other object is of the same type
-        :return: The object itself
-        :doc-author: Trelent
-        """
         if(isinstance(other, self.__class__)):
             self._things = [thing for thing in self._things if thing not in other._things] 
         else:
@@ -148,16 +94,6 @@ class _DataGroup(object):
     
 
     def __sub__(self, other):
-        """
-        The __sub__ function allows for the subtraction of two objects. 
-        If the other object is an instance of this class, it will return a new object containing all items in self that are not in other.
-        If the other object is not an instance of this class, it will raise a TypeError.
-        
-        :param self: Refer to the object itself
-        :param other: Check if the other parameter is an instance of the class
-        :return: A new object of the same type that contains all elements from the calling object except those in other
-        :doc-author: Trelent
-        """
         if(isinstance(other, self.__class__)):
             return type(self)([thing for thing in self._things if thing not in other._things], self.api)
         else:
@@ -165,64 +101,42 @@ class _DataGroup(object):
     
     
     def sorted(self, reverse=False, key=None):
+        """Returns a copy of self with items in ascending order.
+
+        Args:
+            reverse (bool): If True, then items are arranged in decreasing order
+            key (lambda): A function that takes one argument and returns a value to be used for sorting purposes
+        Returns:
+            A list of the items in a sequence, sorted
         """
-        The sorted function returns a sorted list from the items in an iterable.
-        The default is to sort the items in ascending order. If you pass True
-        for reverse, you can get descending order. You can also pass a key parameter
-        to customize how you want the sorting done.
-        
-        :param self: Reference the object that is calling the function
-        :param reverse=False: Specify whether to sort the list in increasing or decreasing order
-        :param key=None: Specify a function that takes an item and returns the key to be used in sorting
-        :return: A list of the items in a sequence, sorted
-        :doc-author: Trelent
-        """
-        '''Return a copy with items in increasing order'''
+
         return type(self)(sorted(self._things, reverse=reverse, key=key), self.api)
         
     
     def sort(self, reverse=False, key=None):
+        """Sorts contents in ascending order
+
+        Args:
+            reverse (bool): If True, then items are arranged in decreasing order
+            key (lambda): A function that takes one argument and returns a value to be used for sorting purposes
         """
-        The sort function rearranges items in increasing order.
         
-        Parameters:
-        reverse (bool): If True, then items are arranged in decreasing order. Default is False.
-        key (lambda): A function that takes one argument and returns a value to be used for sorting purposes.  Default is None.
-        
-        :param self: Reference the object itself
-        :param reverse=False: Specify whether to sort in increasing order or decreasing order
-        :param key=None: Specify a function to be called on each list element prior to making comparisons
-        :return: The sorted list
-        :doc-author: Trelent
-        """
-        '''Rearrange items in increasing order'''
         self._things.sort(reverse=reverse, key=key)
     
     
     @property
     def list(self):
-        """
-        The list function returns a list of all the items in the database.
+        """Returns the contents of the _DataGroup as a list."""
         
-        Returns:
-            A list of all items in the database.  The returned objects are dictionaries with three keys: id, name, and type.
-        
-        :param self: Reference the object itself
-        :return: A list of the values in a dictionary
-        :doc-author: Trelent
-        """
         return [x for x in self._things]
 
 
     def extend(self, datagroup, duplicates=False):
-        """
-        The extend function combines two data groups of the same type.
-        
-        :param self: Used to refer to the object itself.
-        :param datagroup: Used to pass in another instance of the same class.
-        :param duplicates=False: Used to determine whether or not to remove duplicate entries.
-        :return: None.
-        :doc-author: Trelent
+        """Adds contents of another datagroup to the present one
+
+        Args:
+            datagroup: Another instance of the same class
+            duplicates (bool): If true, remove duplicate entries after combining
         """
 
         self.api.logThis("Attempting to extend a " + self.__class__.__name__[1:], self.api.LOG_MEDDETAIL)  
@@ -234,31 +148,16 @@ class _DataGroup(object):
             self.api.logWarning("Could not extend the given datagroup because of conflicting classes, skipping", self.api.LOG_LOWDETAIL)
 
 
-    def unionize(datagroup1, datagroup2, api, duplicates=True):
-        """
-        The unionize function takes two data groups and returns a new data group that is the union of the two.
-        
-        :param datagroup1: Used to specify the first dataframe that is being unionized.
-        :param datagroup2: Used to specify the second dataframe to be unioned with the first one.
-        :param api: Used to pass in the API key.
-        :param duplicates=True: Used to determine whether or not to include duplicate values in the union.
-        :return: a pandas dataframe.
-        :doc-author: Trelent
-        """
-        if(datagroup1.__class__ == datagroup2.__class__):
-            return type(datagroup1)(datagroup1.list, api).extend(datagroup2, duplicates)
+    def intersect(self, other):
+        """Return a new DataGroup containing items common to self, other
 
-
-    def intersect(self, datagroup, newDataGroup=False):
-        """
-        The intersect function is used to find the intersection of two DataGroups.
+        Args:
+            other (_DataGroup): The data group to intersect with
         
-        :param self: Used to refer to the object itself.
-        :param datagroup: Used to specify the data group to intersect with.
-        :param newDataGroup=False: Used to create a new DataGroup object.
-        :return: a new DataGroup that contains elements from the original DataGroup and otherDataGroup.
-        :doc-author: Trelent
+        Returns: 
+            A new DataGroup.
         """
+        
         self.api.logThis("Attempting to intersect a " + self.__class__.__name__[1:], self.api.LOG_MEDDETAIL)
         if(isinstance(datagroup, self.__class__)):
             return type(self)([thing for thing in self._things if thing in datagroup], self.api)
@@ -268,16 +167,14 @@ class _DataGroup(object):
 
 
     def filterAttribute(self, attribute, value):
+        """Returns a subset of the DataGroup based on an attribute
+
+        Args:
+            attribute (str): Used to specify the attribute that will be used for filtering.
+            value: Used to specify the value to filter for.
+
+        Returns:
         """
-        The filterAttribute function specifically filters the objects in a DataGroup for a specific attribute and value.
-        
-        :param self: Used to access the class attributes.
-        :param attribute: Used to specify the attribute that will be used for filtering.
-        :param value: Used to specify the value to filter for.
-        :return: a new DataGroup object.
-        :doc-author: Trelent
-        """
-        '''Filters all objects in this DataGroup using the specified attribute for a given value'''
 
         self.api.logThis("Filtering " + self.__class__.__name__[1:] + " for attributes", self.api.LOG_MEDDETAIL)
         newlist = []
@@ -290,17 +187,16 @@ class _DataGroup(object):
         return type(self)(newlist, self.api)
     
 
-    def filterList(self, attribute, filterList):
-        """
-        The filterList function specifically filters the list of objects in this DataGroup for members that have a specific attribute and value.
+    def filterList(self, attribute, values):
+        """Returns objects in this DataGroup for which an attribute matches a list of possible values
+
+        Args:
+            attribute (str): The attribute that is used for filtering
+            values (list): List of allowable values
         
-        :param self: Used to access the class instance.
-        :param attribute: Used to specify the attribute that is used for filtering.
-        :param filterList: Used to filter the DataGroup for objects that have a specific attribute value.
-        :return: a list of things that meet the criteria.
-        :doc-author: Trelent
+        Returns:
+            A new _DataGroup
         """
-        '''Filters all objects in this DataGroup using the specified attribute and checks if the value exists in the given list'''
 
         self.api.logThis("Filtering " + self.__class__.__name__[1:] + " for members of a list", self.api.LOG_MEDDETAIL)
         newlist = []
@@ -311,7 +207,7 @@ class _DataGroup(object):
             self.api.logWarning("Filtering on attribute [" + str(attribute) + "] yielded no results", self.api.LOG_LOWDETAIL)
         return type(self)(newlist, self.api)
     
-    """
+
     def deepFilterAttributes(self, attributes, value):
         '''Filters all objects in this DataGroup by filtering the attributes given from a list of attributes (If given ["cluster", "work"] it will check if object->attributes->cluster->work equals the given value)'''
 
@@ -332,18 +228,18 @@ class _DataGroup(object):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Deep filtering for the value [" + str(value) + "] yielded no results", self.api.LOG_LOWDETAIL)
-        return type(self)(newlist, self.api)"""
+        return type(self)(newlist, self.api)
     
     
     def advancedFilter(self, filterFunc, **kwargs):
-        """
-        The advancedFilter function is used to filter the list of things in a class using a user defined function.
+        """Returns objects in this DataGroup based on results of a user-defined function.
         
-        :param self: Used to access the API object that is created when we call the method.
-        :param filterFunc: Used to filter the list of things.
-        :param **kwargs: Used to pass a variable-length list of keyword arguments to a function.
-        :return: a list of things that match the given filterFunc and kwargs.
-        :doc-author: Trelent
+        Args:
+            filterFunc (lambda): Function that takes elements of the DataGroup as its first argument
+            **kwargs: Additional keyword arguments to filterFunc.
+        
+        Returns:
+            A new DataGroup.
         """
         self.api.logThis("Advanced filtering " + self.__class__.__name__[1:], self.api.LOG_MEDDETAIL)
         newlist = []
@@ -402,7 +298,7 @@ class _AuthorGroup(_DataGroup):
     
 
     def getIDs(self):
-        '''Returns a list of author ID's'''
+        '''Returns a list of author IDs'''
         return [x.id for x in self._things]
     
 
@@ -412,30 +308,26 @@ class _AuthorGroup(_DataGroup):
 
 
     def getWDs(self):
-        '''Returns a list of the author WD's'''
+        '''Returns a list of the author WDs'''
         return [x.wd for x in self._things]
     
 
     def getUrns(self):
-        '''Returns a list of author Urn's'''
+        '''Returns a list of author URNs'''
         return [x.urn for x in self._things]
-            
-
-
-
+    
 
     def filterNames(self, names, incl_none=False):
-        """
-        The filterNames function is used to filter an Authorgroup based on if the author's name is in the names list.
-        
-        :param self: Used to reference the object itself.
-        :param names: Used to filter the list of names.
-        :param incl_none=False: Used to include None values in the list of names.
-        :return: a list of things that are in the names parameter.
-        :doc-author: Trelent
-        """
-        '''Filter on the author names'''
+        '''Filter the authors by name
 
+        Args:
+            names (list): List of names to match
+            incl_none (bool): Include None values in the list of names
+        
+        Returns:
+            A new AuthorGroup
+        '''
+        
         self.api.logThis("Filtering " + self.__class__.__name__[1:] + " along names", self.api.LOG_MEDDETAIL)
         newlist = []
         for thing in self._things:
@@ -447,38 +339,37 @@ class _AuthorGroup(_DataGroup):
     
 
     def filterIDs(self, ids, incl_none=False):
-        """
-        The filterIDs function specifically filters the list of things that are in the 
-        list of IDs.
+        """Filter the authors by ID
+
+        Args:
+            ids (list): Author IDs to match
+            incl_none (bool): Include None values in the list of IDs
         
-        :param self: Used to access the class attributes.
-        :param ids: Used to filter the list of authors by their ID.
-        :param incl_none=False: Used to include None values in the list of IDs.
-        :return: a list of all the things that have an id in the ids list.
-        :doc-author: Trelent
+        Returns:
+            A new AuthorGroup
         """
-        '''Filter on the author ID's'''
-        self.api.logThis("Filtering " + self.__class__.__name__[1:] + " along ID's", self.api.LOG_MEDDETAIL)
+
+        self.api.logThis("Filtering " + self.__class__.__name__[1:] + " along IDs", self.api.LOG_MEDDETAIL)
         newlist = []
         for thing in self._things:
             if((thing is not None or (thing is None and incl_none)) and thing.id in ids):
                 newlist.append(thing)
         if len(newlist) == 0:
-            self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " ID's returned no entries", self.api.LOG_LOWDETAIL)
+            self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " IDs returned no entries", self.api.LOG_LOWDETAIL)
         return _AuthorGroup(newlist, self.api)
 
 
     def filterWDs(self, wds, incl_none=False):
-        """
-        The filterWDs function specifically filters the list of things along the WD's.
+        """Filter the authors by WikiData ID
         
-        :param self: Used to reference the object itself.
-        :param wds: Used to filter the list of things by their Wikidata ID.
-        :param incl_none=False: Used to include None values in the list.
-        :return: a list of things.
-        :doc-author: Trelent
+        Args:
+            wds (list): List of Wikidata IDs to match
+            incl_none (bool): Include None values in the list
+        
+        Returns:
+            A new AuthorGroup
         """
-        '''Filter on the author WD's'''
+
         self.api.logThis("Filtering " + self.__class__.__name__[1:] + " along WD's", self.api.LOG_MEDDETAIL)
         newlist = []
         for thing in self._things:
@@ -490,16 +381,16 @@ class _AuthorGroup(_DataGroup):
 
 
     def filterUrns(self, urns, incl_none=False):
-        """
-        The filterUrns function specifically filters the list of things along the urns.
+        """Filter the authors by URN
+
+        Args:
+            urns (list): List URNs to match
+            incl_none (bool): Include None values in the list
         
-        :param self: Used to access the class attributes.
-        :param urns: Used to filter the list of things by their urn.
-        :param incl_none=False: Used to include None values in the list.
-        :return: a list of things that match the urns in the list passed to it.
-        :doc-author: Trelent
+        Returns:
+            A new AuthorGroup
         """
-        '''Filter on the author Urns'''
+
         self.api.logThis("Filtering " + self.__class__.__name__[1:] + " along Urn's", self.api.LOG_MEDDETAIL)
         newlist = []
         for thing in self._things:
@@ -565,46 +456,46 @@ class _WorkGroup(_DataGroup):
 
 
     def getIDs(self):
-        '''Returns a list of work ID's'''
+        '''Returns a list of work IDs'''
         return [x.id for x in self._things]
     
 
     def getTitles(self):
-        '''Returns a list of work Title's'''
+        '''Returns a list of work titles'''
         return [x.title for x in self._things]
     
 
     def getWDs(self):
-        '''Returns a list of work WD's'''
+        '''Returns a list of work WDs'''
         return [x.wd for x in self._things]
 
 
     def getURNs(self):
-        '''Returns a list of work Urn's'''
+        '''Returns a list of work URNs'''
         return [x.urn for x in self._things]
     
 
     def getLangs(self):
-        '''Returns a list of work Lang's'''
+        '''Returns a list of work languages'''
         return [x.lang for x in self._things]
 
 
     def getAuthors(self):
-        '''Returns a list of work Author's'''
+        '''Returns a list of Authors'''
         return _AuthorGroup([x.author for x in self._things])
 
 
     def filterIDs(self, ids, incl_none=False):
-        """
-        The filterIDs function specifically filters the list of things along the ID's provided.
+        """Filter the works by ID
+
+        Args:
+            ids (list): List of work IDs to match
+            incl_none (bool): Include None values in the list
         
-        :param self: Used to refer to the object itself.
-        :param ids: Used to filter the list of works by their ID's.
-        :param incl_none=False: Used to include None values in the list.
-        :return: a list of things that have ids in the list passed to it.
-        :doc-author: Trelent
+        Returns:
+            A new WorkGroup
         """
-        '''Filter on the works ID's'''
+
         self.api.logThis("Filtering " + self.__class__.__name__[1:] + " along ID's", self.api.LOG_MEDDETAIL)
         newlist = []
         for thing in self._things:
@@ -616,16 +507,16 @@ class _WorkGroup(_DataGroup):
 
 
     def filterTitles(self, titles, incl_none=False):
-        """
-        The filterTitles function filters the list of things along the titles that are passed in.
+        """Filter the works by title
+
+        Args:
+            titles (list): List of titles to match
+            incl_none (bool): Include None values in the list.
         
-        :param self: Used to reference the class instance.
-        :param titles: Used to filter the results along the titles.
-        :param incl_none=False: Used to include None values in the list.
-        :return: a new list of things that match the titles we passed in.
-        :doc-author: Trelent
+        Returns:
+            A new WorkGroup
         """
-        '''Filter on the works Title's'''
+
         self.api.logThis("Filtering " + self.__class__.__name__[1:] + " along Title's", self.api.LOG_MEDDETAIL)
         newlist = []
         for thing in self._things:
@@ -637,16 +528,16 @@ class _WorkGroup(_DataGroup):
 
 
     def filterWDs(self, wds, incl_none=False):
+        """Filter the works by WikiData ID
+
+        Args:
+            wds (list): List of WikiData IDs to match
+            incl_none (bool): Include None values in the list of things
+
+        Returns:
+            A new WorkGroup
         """
-        The filterWDs function specifically filters the list of things along the WD's.
-        
-        :param self: Used to access the class attributes.
-        :param wds: Used to filter the list of works.
-        :param incl_none=False: Used to include None values in the list of things.
-        :return: a new list of things that match the WD's passed in as an argument.
-        :doc-author: Trelent
-        """
-        '''Filter on the works WD's'''
+
         self.api.logThis("Filtering " + self.__class__.__name__[1:] + " along WD's", self.api.LOG_MEDDETAIL)
         newlist = []
         for thing in self._things:
@@ -658,16 +549,16 @@ class _WorkGroup(_DataGroup):
 
 
     def filterUrns(self, urns, incl_none=False):
-        """
-        The filterUrns function is used to filter the list of things along the URN's.
+        """Filter the works by URN
+
+        Args:
+            urns (list): List of URNs to match
+            incl_none (bool): Include None values in the list of works.
         
-        :param self: Used to refer to the object itself.
-        :param urns: Used to filter the list of works by their URN.
-        :param incl_none=False: Used to include None values in the list of works.
-        :return: a list of things.
-        :doc-author: Trelent
+        Returns:
+            A new WorkGroup
         """
-        '''Filter on the works Urn's'''
+
         self.api.logThis("Filtering " + self.__class__.__name__[1:] + " along Urn's", self.api.LOG_MEDDETAIL)
         newlist = []
         for thing in self._things:
@@ -679,16 +570,16 @@ class _WorkGroup(_DataGroup):
 
 
     def filterAuthors(self, authors, incl_none=False):
-        """
-        The filterAuthors function specifically filters the list of works by author.
+        """Filter the works by author
         
-        :param self: Used to refer to the object itself, which is useful for accessing its attributes.
-        :param authors: Used to filter the list of works by author.
-        :param incl_none=False: Used to include None values in the list.
-        :return: a list of things that have an Author in the authors parameter.
-        :doc-author: Trelent
+        Args:
+            authors (list): List of Author objects to match
+            incl_none (bool): Include None values in the list
+        
+        Returns:
+            A new WorkGroup
         """
-        '''Filter on the works Author's'''
+
         self.api.logThis("Filtering " + self.__class__.__name__[1:] + " along Author's", self.api.LOG_MEDDETAIL)
         newlist = []
         for thing in self._things:
@@ -700,16 +591,16 @@ class _WorkGroup(_DataGroup):
         
         
     def filterLangs(self, langs, incl_none=False):
+        """Filter the works by language
+
+        Args:
+            langs (list): List of languages to match
+            incl_none (bool): Include None values in the list
+
+        Returns:
+            A new WorkGroup
         """
-        The filterLangs function is used to filter the list of works by language.
-        
-        :param self: Used to refer to the object itself.
-        :param langs: Used to filter the list of works by language.
-        :param incl_none=False: Used to include None values in the list.
-        :return: a new list of things, filtered by the provided langs.
-        :doc-author: Trelent
-        """
-        '''Filter on the works Lang's'''
+
         self.api.logThis("Filtering " + self.__class__.__name__[1:] + " along Lang's", self.api.LOG_MEDDETAIL)
         newlist = []
         for thing in self._things:
@@ -718,6 +609,7 @@ class _WorkGroup(_DataGroup):
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " Lang's returned no entries", self.api.LOG_LOWDETAIL)
         return _WorkGroup(newlist, self.api)
+
 
 class Work(object):
     '''An epic poem'''
@@ -787,51 +679,51 @@ class _CharacterGroup(_DataGroup):
     
 
     def getIDs(self):
-        '''Returns a list of character ID's'''
+        '''Returns a list of character IDs'''
         return [x.id for x in self._things]
     
 
     def getNames(self):
-        '''Returns a list of character Name's'''
+        '''Returns a list of character names'''
         return [x.name for x in self._things]
     
 
     def getBeings(self):
-        '''Returns a list of character Being's'''
+        '''Returns a list of character beings'''
         return [x.being for x in self._things]
     
 
     def getNumbers(self):
-        '''Returns a list of character Number's'''
+        '''Returns a list of character numbers'''
         return [x.number for x in self._things]
     
 
     def getWDs(self):
-        '''Returns a list of character WD's'''
+        '''Returns a list of character WikiData IDs'''
         return [x.wd for x in self._things]
 
 
     def getMantos(self):
-        '''Returns a list of character Manto's'''
+        '''Returns a list of character MANTO IDs'''
         return [x.manto for x in self._things]
     
 
     def getGenders(self):
-        '''Returns a list of character Gender's'''
+        '''Returns a list of character genders'''
         return [x.gender for x in self._things]
 
 
     def filterIDs(self, ids, incl_none=False):
-        """
-        The filterIDs function is used to filter the list of characters by ID.
+        """Filter characters by ID
+
+        Args:
+            ids (list): list of IDs to match
+            incl_none (bool): Include None values in the list.
         
-        :param self: Used to access the class attributes.
-        :param ids: Used to filter the list of things, and it is a list of integers.
-        :param incl_none=False: Used to include None values in the list.
-        :return: a list of characters that have the ID's specified in the ids parameter.
-        :doc-author: Trelent
+        Returns:
+            A new CharacterGroup
         """
-        '''Filter on the characters ID's'''
+
         self.api.logThis("Filtering " + self.__class__.__name__[1:] + " along ID's", self.api.LOG_MEDDETAIL)
         newlist = []
         for thing in self._things:
@@ -843,17 +735,16 @@ class _CharacterGroup(_DataGroup):
 
 
     def filterNames(self, names, incl_none=False):
-        """
-        The filterNames function specifically accomplishes two things:
-        1.
+        """Filter characters by name
+
+        Args:
+            names (list): List of names to match
+            incl_none (bool): Include None values in the list.
         
-        :param self: Used to access the class attributes and methods.
-        :param names: Used to filter the list of names.
-        :param incl_none=False: Used to include None values in the list.
-        :return: a list of things that have a name attribute.
-        :doc-author: Trelent
+        Returns:
+            A new CharacterGroup
         """
-        '''Filter on the characters Name's'''
+
         self.api.logThis("Filtering " + self.__class__.__name__[1:] + " along Name's", self.api.LOG_MEDDETAIL)
         newlist = []
         for thing in self._things:
@@ -865,17 +756,16 @@ class _CharacterGroup(_DataGroup):
 
 
     def filterBeings(self, beings, incl_none=False):
-        """
-        The filterBeings function specifically accomplishes the following:
-            1.
+        """Filter characters by `being` attribute
         
-        :param self: Used to access the class instance.
-        :param beings: Used to filter the list of beings that are returned.
-        :param incl_none=False: Used to include None values in the list.
-        :return: a list of things.
-        :doc-author: Trelent
+        Args:
+            beings (list): list of allowed `being` values
+            incl_none (bool): Include None values in the list
+        
+        Returns:
+            A new CharacterGroup
         """
-        '''Filter on the characters Being's'''
+        
         self.api.logThis("Filtering " + self.__class__.__name__[1:] + " along Being's", self.api.LOG_MEDDETAIL)
         newlist = []
         for thing in self._things:
@@ -887,16 +777,16 @@ class _CharacterGroup(_DataGroup):
 
 
     def filterNumbers(self, numbers, incl_none=False):
-        """
-        The filterNumbers function specifically filters the list of things by a list of numbers.
+        """Filter characters by `number` attribute
         
-        :param self: Used to access the class variables.
-        :param numbers: Used to filter the list of things.
-        :param incl_none=False: Used to include None values in the list.
-        :return: a list of things that have a number in the numbers list.
-        :doc-author: Trelent
+        Args:
+            numbers (list): List of allowed `number` values
+            incl_none (bool): Include None values in the list
+        
+        Returns:
+            A new CharacterGroup
         """
-        '''Filter on the characters Number's'''
+        
         self.api.logThis("Filtering " + self.__class__.__name__[1:] + " along Number's", self.api.LOG_MEDDETAIL)
         newlist = []
         for thing in self._things:
@@ -908,16 +798,16 @@ class _CharacterGroup(_DataGroup):
 
 
     def filterWDs(self, wds, incl_none=False):
-        """
-        The filterWDs function is used to filter the list of things that are being returned by the API.
+        """Filter characters by `wd` attribute (WikiData ID)
         
-        :param self: Used to access the class attributes, and is used to access the API.
-        :param wds: Used to filter the WD's that are used to create the list of characters.
-        :param incl_none=False: Used to include None values in the list.
-        :return: a list of Thing objects that have a wd attribute that is also present in the passed list of WD identifiers.
-        :doc-author: Trelent
+        Args:
+            wds (list): List of allowed WikiData IDs
+            incl_none (bool): Include None values in the list
+        
+        Returns:
+            A new CharacterGroup
         """
-        '''Filter on the characters WD's'''
+
         self.api.logThis("Filtering " + self.__class__.__name__[1:] + " along WD's", self.api.LOG_MEDDETAIL)
         newlist = []
         for thing in self._things:
@@ -929,16 +819,16 @@ class _CharacterGroup(_DataGroup):
 
 
     def filterMantos(self, mantos, incl_none=False):
-        """
-        The filterMantos function specifically filters the list of things by a list of mantos.
+        """Filter characters by `manto` attribute (MANTO ID)
         
-        :param self: Used to access the class attributes.
-        :param mantos: Used to filter the list of things by their manto.
-        :param incl_none=False: Used to include None values in the list.
-        :return: a list of things that have a manto in the provided list.
-        :doc-author: Trelent
+        Args:
+            mantos (list): List of allowed MANTO IDs
+            incl_none (bool): Include None values in the list
+        
+        Returns:
+            A new CharacterGroup
         """
-        '''Filter on the characters Manto's'''
+
         self.api.logThis("Filtering " + self.__class__.__name__[1:] + " along Manto's", self.api.LOG_MEDDETAIL)
         newlist = []
         for thing in self._things:
@@ -950,16 +840,16 @@ class _CharacterGroup(_DataGroup):
 
 
     def filterGenders(self, genders, incl_none=False):
-        """
-        The filterGenders function is used to filter the list of characters by gender.
+        """Filter characters by `gender` attribute
         
-        :param self: Used to access the class' instance variables.
-        :param genders: Used to specify the genders to include in the filtered list.
-        :param incl_none=False: Used to include None values in the list.
-        :return: the list of characters that have a gender in the genders list.
-        :doc-author: Trelent
+        Args:
+            genders (list): List of allowed `gender` values
+            incl_none (bool): Include None values in the list
+        
+        Returns:
+            A new CharacterGroup
         """
-        '''Filter on the characters Gender's'''
+
         self.api.logThis("Filtering " + self.__class__.__name__[1:] + " along Gender's", self.api.LOG_MEDDETAIL)
         newlist = []
         for thing in self._things:
@@ -1081,16 +971,16 @@ class _CharacterInstanceGroup(_DataGroup):
     
 
     def filterIDs(self, ids, incl_none=False):
-        """
-        The filterIDs function is used to filter the character instances by ID.
+        """Filter character instances by `id` attribute
+
+        Args:
+            ids (list): List of allowed `id` values
+            incl_none (bool): Include None values in the results
         
-        :param self: Used to access the class attributes.
-        :param ids: Used to filter the character instances by their ID.
-        :param incl_none=False: Used to include None values in the list.
-        :return: a list of all the things that are in the ids list.
-        :doc-author: Trelent
+        Returns:
+            A new CharacterInstanceGroup
         """
-        '''Filter on the character instances ID's'''
+
         self.api.logThis("Filtering " + self.__class__.__name__[1:] + " along ID's", self.api.LOG_MEDDETAIL)
         newlist = []
         for thing in self._things:
@@ -1102,16 +992,16 @@ class _CharacterInstanceGroup(_DataGroup):
     
 
     def filterContexts(self, contexts, incl_none=False):
-        """
-        The filterContexts function is used to filter the list of things that are being returned by the getThings function.
+        """Filter character instances by `context` attribute
+
+        Args:
+            contexts (list): List of allowed `context` values
+            incl_none (bool): Include None values in the results
         
-        :param self: Used to access the class instance within the same class.
-        :param contexts: Used to filter the character instances that are returned.
-        :param incl_none=False: Used to include None values in the list.
-        :return: a list of the things that are in the context, or None if you want to include all things with a None context.
-        :doc-author: Trelent
+        Returns:
+            A new CharacterInstanceGroup
         """
-        '''Filter on the character instances context's'''
+
         self.api.logThis("Filtering " + self.__class__.__name__[1:] + " along Context's", self.api.LOG_MEDDETAIL)
         newlist = []
         for thing in self._things:
@@ -1123,16 +1013,16 @@ class _CharacterInstanceGroup(_DataGroup):
 
 
     def filterChars(self, chars, incl_none=False):
-        """
-        The filterChars function is used to filter the list of things that are contained in a ThingList.
+        """Filter character instances by underlying Character
+
+        Args:
+            chars (list): List of allowed Character objects
+            incl_none (bool): Include None values in the results
         
-        :param self: Used to refer to the object instance.
-        :param chars: Used to filter on the character instance's character.
-        :param incl_none=False: Used to include None values in the list.
-        :return: a list of Thing's that have a character instance in the chars list.
-        :doc-author: Trelent
+        Returns:
+            A new CharacterInstanceGroup
         """
-        '''Filter on the character instances character's'''
+
         self.api.logThis("Filtering " + self.__class__.__name__[1:] + " along Char's", self.api.LOG_MEDDETAIL)
         newlist = []
         for thing in self._things:
@@ -1143,38 +1033,17 @@ class _CharacterInstanceGroup(_DataGroup):
         return _CharacterInstanceGroup(newlist, self.api)
 
 
-    def filterDisgs(self, disgs, incl_none=False):
-        """
-        The filterDisgs function specifically filters the character instances in a list of characters based on whether or not they have a disguise.
-        
-        :param self: Used to refer to the object instance.
-        :param disgs: Used to filter the character instances that are returned.
-        :param incl_none=False: Used to include None values in the list.
-        :return: a list of things that have a particular instance of Disguise in their list of Disguises.
-        :doc-author: Trelent
-        """
-        '''Filter on the character instances Disguise's'''
-        self.api.logThis("Filtering " + self.__class__.__name__[1:] + " along Disg's", self.api.LOG_MEDDETAIL)
-        newlist = []
-        for thing in self._things:
-            if( (thing is not None or (thing is None and incl_none)) and thing.disg is not None and thing.disg in disgs ):
-                newlist.append(thing)
-        if len(newlist) == 0:
-            self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " Disg's returned no entries", self.api.LOG_LOWDETAIL)
-        return _CharacterInstanceGroup(newlist, self.api)
-
-
     def filterNames(self, names, incl_none=False):
-        """
-        The filterNames function is used to filter the list of characters by their names.
+        """Filter character instances by `name` attribute
+
+        Args:
+            names (list): List of allowed `name` values
+            incl_none (bool): Include None values in the results
         
-        :param self: Used to access the class instance within a method.
-        :param names: Used to filter the list of characters by name.
-        :param incl_none=False: Used to include None values in the list.
-        :return: a list of the things that are in names.
-        :doc-author: Trelent
+        Returns:
+            A new CharacterInstanceGroup
         """
-        '''Filter on the character instances Name's'''
+
         self.api.logThis("Filtering " + self.__class__.__name__[1:] + " along Name's", self.api.LOG_MEDDETAIL)
         newlist = []
         for thing in self._things:
@@ -1186,16 +1055,16 @@ class _CharacterInstanceGroup(_DataGroup):
 
 
     def filterBeings(self, beings, incl_none=False):
-        """
-        The filterBeings function is used to filter the list of things that are being filtered by the filter function.
+        """Filter character instances by `being` attribute
+
+        Args:
+            beings (list): List of allowed `being` values
+            incl_none (bool): Include None values in the results
         
-        :param self: Used to refer to the object instance.
-        :param beings: Used to filter the list of things that are being.
-        :param incl_none=False: Used to include None values in the list.
-        :return: a list of things that have a being property and are in the beings list.
-        :doc-author: Trelent
+        Returns:
+            A new CharacterInstanceGroup
         """
-        '''Filter on the character instances Being's'''
+
         self.api.logThis("Filtering " + self.__class__.__name__[1:] + " along Being's", self.api.LOG_MEDDETAIL)
         newlist = []
         for thing in self._things:
@@ -1207,16 +1076,16 @@ class _CharacterInstanceGroup(_DataGroup):
 
 
     def filterNumbers(self, numbers, incl_none=False):
-        """
-        The filterNumbers function is used to filter the list of characters by their number.
+        """Filter character instances by `number` attribute
+
+        Args:
+            numbers (list): List of allowed `number` values
+            incl_none (bool): Include None values in the results
         
-        :param self: Used to access the class instance.
-        :param numbers: Used to filter the list of things by their number.
-        :param incl_none=False: Used to include None values in the list.
-        :return: a list of things that have a number attribute in the numbers parameter.
-        :doc-author: Trelent
+        Returns:
+            A new CharacterInstanceGroup
         """
-        '''Filter on the character instances Number's'''
+
         self.api.logThis("Filtering " + self.__class__.__name__[1:] + " along Number's", self.api.LOG_MEDDETAIL)
         newlist = []
         for thing in self._things:
@@ -1228,16 +1097,16 @@ class _CharacterInstanceGroup(_DataGroup):
 
 
     def filterGenders(self, genders, incl_none=False):
-        """
-        The filterGenders function is used to filter the list of characters by gender.
+        """Filter character instances by `gender` attribute
+
+        Args:
+            genders (list): List of allowed `gender` values
+            incl_none (bool): Include None values in the results
         
-        :param self: Used to store the class instance.
-        :param genders: Used to specify the list of genders to filter on.
-        :param incl_none=False: Used to include None values in the list.
-        :return: a list of things that have the same gender as specified in the genders argument.
-        :doc-author: Trelent
+        Returns:
+            A new CharacterInstanceGroup
         """
-        '''Filter on the character instances Gender's'''
+
         self.api.logThis("Filtering " + self.__class__.__name__[1:] + " along Gender's", self.api.LOG_MEDDETAIL)
         newlist = []
         for thing in self._things:
@@ -1269,8 +1138,8 @@ class CharacterInstance(object):
 
         if data:
             self._from_data(data)
-
-
+            
+            
     def __lt__(self, other):
         '''True if names, char names in alpha order'''
         
@@ -1281,6 +1150,7 @@ class CharacterInstance(object):
             self.api.logWarning("Cannot compare objects of different classes", 
                                     self.api.LOG_LOWDETAIL)
             raise TypeError
+
 
     def __repr__(self):
         name = self.name
@@ -1316,6 +1186,13 @@ class CharacterInstance(object):
         if 'gender' in data and data['gender'] is not None:
             self.gender = data['gender']
 
+    @property
+    def wd(self):
+        '''returns WikiData id of underlying Character'''
+        if self.char is not None:
+            return self.char.wd
+
+
 
 class _SpeechClusterGroup(_DataGroup):
     '''Datagroup used to hold a list of Speech Cluster's'''
@@ -1334,16 +1211,16 @@ class _SpeechClusterGroup(_DataGroup):
 
     
     def filterIDs(self, ids, incl_none=False):
-        """
-        The filterIDs function is used to filter the list of things in a class by their ID's.
+        """Filter speech clusters by ID
+
+        Args:
+            ids: List of allowed IDs
+            incl_none (bool): Include None values in the results
         
-        :param self: Used to access the class attributes.
-        :param ids: Used to pass a list of ID's that you want to filter on.
-        :param incl_none=False: Used to determine whether or not to include None values in the filtered list.
-        :return: a list of things that have the ID in the ids variable.
-        :doc-author: Trelent
+        Returns:
+            A new SpeechClusterGroup
         """
-        '''Filter on the Speech Cluster ID's'''
+
         self.api.logThis("Filtering " + self.__class__.__name__[1:] + " along ID's", self.api.LOG_MEDDETAIL)
         newlist = []
         for thing in self._things:
@@ -1408,14 +1285,7 @@ class SpeechCluster(object):
     
 
     def getFirst(self):
-        """
-        The getFirst function is a method of the Cluster class.
-        
-        :param self: Used to refer to the object itself.
-        :return: an object of type speech.
-        :doc-author: Trelent
-        """
-        '''Return first speech of the cluster'''
+        """Return the first speech of a cluster"""
         
         if self._first is None:
             sgroup = self.api.getSpeeches(cluster_id=self.id)
@@ -1435,13 +1305,8 @@ class SpeechCluster(object):
 
 
     def countReplies(self):
-        """
-        The countReplies function counts the number of replies in a cluster.
-        
-        :param self: Used to access the class attributes.
-        :return: the number of replies in the cluster.
-        :doc-author: Trelent
-        """
+        """Returns the number of replies in a cluster"""
+
         speeches = self.api.getSpeeches(cluster_id=self.id)
         replies = 0
         addresseeList = []
@@ -1454,13 +1319,8 @@ class SpeechCluster(object):
     
 
     def countInterruptions(self):
-        """
-        The countInterruptions function counts the number of interruptions in a cluster.
-        
-        :param self: Used to access the class attributes.
-        :return: an integer, the number of interruptions in a cluster.
-        :doc-author: Trelent
-        """
+        """Returns the number of interruptions in a cluster"""
+
         speeches = self.api.getSpeeches(cluster_id=self.id)
         interruptions = 0
         prevAddr = []
@@ -1472,7 +1332,7 @@ class SpeechCluster(object):
 
 
 class _SpeechGroup(_DataGroup):
-    '''Datagroup used to hold a list of Speech's'''
+    '''Datagroup used to hold a list of Speeches'''
 
     def __init__(self, things=None, api=None):
         self._things = things
@@ -1483,92 +1343,96 @@ class _SpeechGroup(_DataGroup):
 
     
     def getIDs(self):
-        '''Returns a list of Speech ID's'''
+        '''Returns a list of Speech IDs'''
         return [x.id for x in self._things]
     
 
     def getClusters(self):
-        '''Returns a list of Speech Cluster's'''
+        '''Returns a list of Speech Clusters'''
         return _SpeechClusterGroup([x.cluster for x in self._things], api=self.api)
     
 
     def getSeqs(self):
-        '''Returns a list of Speech Seq's'''
+        '''Returns a list of Speech Seqs'''
         return [x.seq for x in self._things]
     
 
     def get_L_FIs(self):
-        '''Returns a list of Speech First Line's'''
+        '''Returns a list of Speech First Lines'''
         return [x.l_fi for x in self._things]
     
 
     def get_L_LAs(self):
-        '''Returns a list of Speech Last Line's'''
+        '''Returns a list of Speech Last Lines'''
         return [x.l_la for x in self._things]
     
 
-    def isCluster(self, clusterID):
-        """
-        The isCluster function is used to check if a cluster exists in the clusters list.
+    def getSpkrs(self, flatten=False):
+        '''Returns speakers of member speeches
         
-        :param self: Used to refer to the object itself.
-        :param clusterID: Used to check if the cluster with that ID exists in the list of clusters.
-        :return: a boolean value that states whether or not the clusterID is in the clusters list.
-        :doc-author: Trelent
-        """
-        clusters = self.getClusters()
-        for thing in clusters:
-            if(thing.id != clusterID):
-                return False
-        return True
-    
+        Args:
+            flatten (bool): If False, result will have one list for each
+                            member speech, representing the `spkr` attribute of
+                            the respective speech. If True, all speakers of all
+                            speeches are consolidated, duplicates removed, and
+                            result is converted to a CharacterInstanceGroup.
+        Returns:
+            list or CharacterInstanceGroup
+        '''
 
-    def getSpkrs(self, flatten=True):
-        '''Returns a list of Speech Speaker's'''
+        spkrs = [s.spkr for s in self.speeches]
+        
         if flatten:
-            newlist = []
-            for x in self._things:
-                for elem in x.spkr:
-                    if elem not in newlist:
-                        newlist.append(elem)
-        else:
-            newlist = [x.spkr for x in self._things]
-        return _CharacterInstanceGroup(newlist, self.api)
+            spkrs = set(inst for spkr_list in spkrs for inst in spkr_list)
+            spkrs = _CharacterInstanceGroup(list(spkrs), api=self.api)
+        
+        return spkrs
 
-    def getAddrs(self, flatten=True):
-        '''Returns a list of Speech Addressee's'''
+
+    def getAddrs(self, flatten=False):
+        '''Returns speakers of member speeches
+        
+        Args:
+            flatten (bool): If False, result will have one list for each
+                            member speech, representing the `spkr` attribute of
+                            the respective speech. If True, all speakers of all
+                            speeches are consolidated, duplicates removed, and
+                            result is converted to a CharacterInstanceGroup.
+        Returns:
+            list or CharacterInstanceGroup
+        '''
+
+        addrs = [s.addr for s in self.speeches]
+        
         if flatten:
-            newlist = []
-            for x in self._things:
-                for elem in x.addr:
-                    if elem not in newlist:
-                        newlist.append(elem)
-        else:
-            newlist = [x.addr for x in self._things]
-        return _CharacterInstanceGroup(newlist, self.api)
+            addrs = set(inst for addr_list in addrs for inst in addr_list)
+            addrs = _CharacterInstanceGroup(list(addrs), api=self.api)
+        
+        return addrs
+
 
     def getParts(self):
-        '''Returns a list of Speech Part's'''
-        return [x.part for x in self._things]
+        '''Returns the `part` attrs of member speeches as a list'''
+        return [s.part for s in self.speeches]
 
 
     def getTypes(self):
-        '''Returns a list of Speech Part's'''
-        return [x.type for x in self._things]
+        '''Returns the `type` attrs of member speeches as a list'''
+        return [s.type for s in self.speeches]
 
 
     def getWorks(self):
-        '''Returns a list of Speech Part's'''
-        return [x.work for x in self._things]
+        '''Returns the works of '''
+        return [s.work for s in self.speeches]
 
 
     def filterIDs(self, ids, incl_none=False):
         """
         The filterIDs function is used to filter the list of things that are currently in the Speech class.
         
-        :param self: Used to access the class attributes and methods.
-        :param ids: Used to filter the list of speeches by their ID.
-        :param incl_none=False: Used to include or exclude objects with None as their ID.
+            self: Used to access the class attributes and methods.
+            ids: Used to filter the list of speeches by their ID.
+            incl_none=False: Used to include or exclude objects with None as their ID.
         :return: a list of the speeches that have an ID in the ids parameter.
         :doc-author: Trelent
         """
@@ -1587,9 +1451,9 @@ class _SpeechGroup(_DataGroup):
         """
         The filterClusters function specifically filters the list of things along the clusters that are passed in.
         
-        :param self: Used to reference the class instance.
-        :param clusters: Used to filter the list of things.
-        :param incl_none=False: Used to include None's in the list.
+            self: Used to reference the class instance.
+            clusters: Used to filter the list of things.
+            incl_none=False: Used to include None's in the list.
         :return: a list of the things that are in any of the clusters listed as parameters.
         :doc-author: Trelent
         """
@@ -1609,9 +1473,9 @@ class _SpeechGroup(_DataGroup):
         The filterSeqs function is used to filter the list of things that are being processed by the
         Speech API.
         
-        :param self: Used to reference the object itself.
-        :param seqs: Used to filter the list of things.
-        :param incl_none=False: Used to include None values in the list of things.
+            self: Used to reference the object itself.
+            seqs: Used to filter the list of things.
+            incl_none=False: Used to include None values in the list of things.
         :return: a list of things that are in seqs.
         :doc-author: Trelent
         """
@@ -1630,9 +1494,9 @@ class _SpeechGroup(_DataGroup):
         """
         The filterL_FIs function specifically filters the list of things along the L_FI's.
         
-        :param self: Used to access the class attributes and methods.
-        :param l_fis: Used to filter the list of things along the L_FI's.
-        :param incl_none=False: Used to include None values in the list.
+            self: Used to access the class attributes and methods.
+            l_fis: Used to filter the list of things along the L_FI's.
+            incl_none=False: Used to include None values in the list.
         :return: the filtered list of things that have a l_fi in the l_fis list.
         :doc-author: Trelent
         """
@@ -1651,9 +1515,9 @@ class _SpeechGroup(_DataGroup):
         """
         The filterL_LAs function specifically filters the list of things along the L_LA's.
         
-        :param self: Used to access the API.
-        :param l_las: Used to filter the list of things by their L_LA.
-        :param incl_none=False: Used to include None values in the list of L_LAs.
+            self: Used to access the API.
+            l_las: Used to filter the list of things by their L_LA.
+            incl_none=False: Used to include None values in the list of L_LAs.
         :return: a list of the things that are included in l_las.
         :doc-author: Trelent
         """
@@ -1672,9 +1536,9 @@ class _SpeechGroup(_DataGroup):
         """
         The filterSpkrInstances function specifically filters the list of things in the class by speaker instances.
         
-        :param self: Used to access the API class.
-        :param spkrs: Used to specify the speakers to include in the filtered list.
-        :param incl_none=False: Used to include None values in the list.
+            self: Used to access the API class.
+            spkrs: Used to specify the speakers to include in the filtered list.
+            incl_none=False: Used to include None values in the list.
         :return: a new list of objects that contain the specified speaker instances.
         :doc-author: Trelent
         """
@@ -1693,9 +1557,9 @@ class _SpeechGroup(_DataGroup):
         """
         The filterSpkrs function specifically filters the list of things in the class by speaker.
         
-        :param self: Used to access the class attributes.
-        :param spkrs: Used to filter the list of things along the speakers.
-        :param incl_none=False: Used to include None objects in the list of returned objects.
+            self: Used to access the class attributes.
+            spkrs: Used to filter the list of things along the speakers.
+            incl_none=False: Used to include None objects in the list of returned objects.
         :return: a list of the things that have a speaker with a character in the spkrs list.
         :doc-author: Trelent
         """
@@ -1716,9 +1580,9 @@ class _SpeechGroup(_DataGroup):
         The filterAddrInstances function specifically filters the list of things in the current instance
         of a class by whether or not they have an address character that is contained within a given list.
         
-        :param self: Used to access the class's attributes and methods.
-        :param addrs: Used to filter the list of instances by the addressee instance.
-        :param incl_none=False: Used to include None values in the list.
+            self: Used to access the class's attributes and methods.
+            addrs: Used to filter the list of instances by the addressee instance.
+            incl_none=False: Used to include None values in the list.
         :return: the list of things that are in addrs.
         :doc-author: Trelent
         """
@@ -1737,9 +1601,9 @@ class _SpeechGroup(_DataGroup):
         """
         The filterAddrs function is used to filter the list of things that are being processed by the Speech Character's.
         
-        :param self: Used to access the class attributes and methods.
-        :param addrs: Used to filter the list of things.
-        :param incl_none=False: Used to include None values in the list of things.
+            self: Used to access the class attributes and methods.
+            addrs: Used to filter the list of things.
+            incl_none=False: Used to include None values in the list of things.
         :return: a list of things that match the filter.
         :doc-author: Trelent
         """
@@ -1758,9 +1622,9 @@ class _SpeechGroup(_DataGroup):
         """
         The filterParts function is used to filter the list of things along the part's.
         
-        :param self: Used to access the class instance in which it is called.
-        :param parts: Used to filter the list of things along the parts.
-        :param incl_none=False: Used to include None values in the list.
+            self: Used to access the class instance in which it is called.
+            parts: Used to filter the list of things along the parts.
+            incl_none=False: Used to include None values in the list.
         :return: a list of things that meet the given parts.
         :doc-author: Trelent
         """
@@ -1779,9 +1643,9 @@ class _SpeechGroup(_DataGroup):
         """
         The filterTypes function specifically filters the list of things by type.
         
-        :param self: Used to access the class attributes.
-        :param types: Used to filter the list of things along the types.
-        :param incl_none=False: Used to include None's in the list.
+            self: Used to access the class attributes.
+            types: Used to filter the list of things along the types.
+            incl_none=False: Used to include None's in the list.
         :return: a list of things that are not None and have a type in the types argument.
         :doc-author: Trelent
         """
@@ -1800,9 +1664,9 @@ class _SpeechGroup(_DataGroup):
         """
         The filterWorks function specifically filters the list of things along the works.
         
-        :param self: Used to access the class attributes.
-        :param works: Used to filter the list of things.
-        :param incl_none=False: Used to include None values in the list.
+            self: Used to access the class attributes.
+            works: Used to filter the list of things.
+            incl_none=False: Used to include None values in the list.
         :return: a list of things that are in the works.
         :doc-author: Trelent
         """
@@ -1845,8 +1709,8 @@ class Speech(object):
         It is called by the __init__ function of the Speech class, and should not be called directly.
         
         
-        :param self: Access the attributes of the class
-        :param data: Populate the attributes of the instance
+            self: Access the attributes of the class
+            data: Populate the attributes of the instance
         :return: A dictionary of the attributes
         :doc-author: Trelent
         """
@@ -1895,7 +1759,7 @@ class Speech(object):
         The __repr__ function is what is called when you try to &quot;print&quot; an object. It returns a string representation of the object, which is how the object appears when output in the console.
         
         
-        :param self: Refer to the object itself
+            self: Refer to the object itself
         :return: The string representation of the object
         :doc-author: Trelent
         """
@@ -1920,7 +1784,7 @@ class Speech(object):
         The author function returns the name of the author of this book.
         
         
-        :param self: Access the attributes and methods of the class in python
+            self: Access the attributes and methods of the class in python
         :return: The author of the book
         :doc-author: Trelent
         """
@@ -1934,7 +1798,7 @@ class Speech(object):
         The lang function returns the language code of the current locale setting.
         
         
-        :param self: Reference the instance of the class
+            self: Reference the instance of the class
         :return: The language of the current document
         :doc-author: Trelent
         """
@@ -1948,7 +1812,7 @@ class Speech(object):
         The l_range function returns a list of line numbers from the first parameter to the second.
         The first parameter is inclusive, while the second is exclusive.
         
-        :param self: Access variables that belongs to the class
+            self: Access variables that belongs to the class
         :return: The first and last line numbers of the file
         :doc-author: Trelent
         """
@@ -1963,7 +1827,7 @@ class Speech(object):
         
         
         
-        :param self: Access variables that belongs to the class
+            self: Access variables that belongs to the class
         :return: A list of the tokens in a passage
         :doc-author: Trelent
         """
@@ -1978,7 +1842,7 @@ class Speech(object):
            which speech in that work we want to get. It returns a string containing 
            the CTS URN of that speech.
         
-        :param self: Refer to the object itself
+            self: Refer to the object itself
         :return: The cts passage corresponding to the speech
         :doc-author: Trelent
         """
@@ -2005,7 +1869,7 @@ class Speech(object):
         """
         The isRepliedTo function is used to determine whether or not a speech has been responded to.
         
-        :param self: Used to access the attributes of the class.
+            self: Used to access the attributes of the class.
         :return: a boolean value of True if the speech is a reply to another speech in the cluster, and False otherwise.
         :doc-author: Trelent
         """
@@ -2022,7 +1886,7 @@ class Speech(object):
         The isInterrupted function specifically accomplishes two things:
         1.
         
-        :param self: Used to access the class attributes.
+            self: Used to access the class attributes.
         :return: False when there are no interruptions in the cluster.
         :doc-author: Trelent
         """
@@ -2053,12 +1917,12 @@ class DicesAPI(object):
         It initializes the attributes of the class, and it can take arguments that get passed to it by its parent class. 
         In this case, we are using the __init__ function to initialize some attributes in our Dices object.
         
-        :param self: Refer to the object instance (e
-        :param dices_api=DEFAULT_API: Set the default value of the dices api
-        :param cts_api=DEFAULT_CTS: Set the default cts api to use
-        :param logfile=None: Specify a logfile
-        :param logdetail=LOG_MEDDETAIL: Set the detail level of the log
-        :param progress_class=None: Pass a custom progress class to the dices object
+            self: Refer to the object instance (e
+            dices_api=DEFAULT_API: Set the default value of the dices api
+            cts_api=DEFAULT_CTS: Set the default cts api to use
+            logfile=None: Specify a logfile
+            logdetail=LOG_MEDDETAIL: Set the detail level of the log
+            progress_class=None: Pass a custom progress class to the dices object
         :return: Nothing
         :doc-author: Trelent
         """
@@ -2086,10 +1950,10 @@ class DicesAPI(object):
         
         
         
-        :param self: Access variables that belong to the class
-        :param endpoint: Specify the api endpoint
-        :param params=None: Pass in a dictionary of parameters to be passed into the api call
-        :param progress=False: Turn off the progress bar
+            self: Access variables that belong to the class
+            endpoint: Specify the api endpoint
+            params=None: Pass in a dictionary of parameters to be passed into the api call
+            progress=False: Turn off the progress bar
         :return: A list of dictionaries
         :doc-author: Trelent
         """
@@ -2145,9 +2009,9 @@ class DicesAPI(object):
         """
         The createLog function is used to create a new log file.
         
-        :param self: Used to access the attributes and methods of the class in python.
-        :param logfile: Used to specify the name of the log file.
-        :param clearLog=False: Used to clear the log file.
+            self: Used to access the attributes and methods of the class in python.
+            logfile: Used to specify the name of the log file.
+            clearLog=False: Used to clear the log file.
         :return: None.
         :doc-author: Trelent
         """
@@ -2175,7 +2039,7 @@ class DicesAPI(object):
         The logdetail attribute is an integer that represents the level of detail in the logs. 
         It can be set to one of four values: No, Low, Medium or High.  The _detailtostring function returns these values as strings instead of integers.
         
-        :param self: Access the attributes and methods of the class in python
+            self: Access the attributes and methods of the class in python
         :return: The log detail level as a string
         :doc-author: Trelent
         """
@@ -2193,7 +2057,7 @@ class DicesAPI(object):
         """
         The clearLog function is used to clear the log file.
         
-        :param self: Used to refer to the object itself.
+            self: Used to refer to the object itself.
         :return: a None object.
         :doc-author: Trelent
         """
@@ -2206,9 +2070,9 @@ class DicesAPI(object):
         """
         The logThis function is used to log the messages in a file or print it on console.
         
-        :param self: Used to access the class attributes.
-        :param message: Used to pass the message that needs to be logged.
-        :param priority: Used to determine if a message should be logged.
+            self: Used to access the class attributes.
+            message: Used to pass the message that needs to be logged.
+            priority: Used to determine if a message should be logged.
         :return: the message that was passed into it.
         :doc-author: Trelent
         """
@@ -2224,9 +2088,9 @@ class DicesAPI(object):
         """
         The logWarning function prints a warning message to the screen and also writes it to the log file if one is specified.
         
-        :param self: Used to access the class attributes.
-        :param message: Used to pass the message that needs to be logged.
-        :param priority: Used to determine if a message should be logged or not.
+            self: Used to access the class attributes.
+            message: Used to pass the message that needs to be logged.
+            priority: Used to determine if a message should be logged or not.
         :return: None.
         :doc-author: Trelent
         """
@@ -2241,9 +2105,9 @@ class DicesAPI(object):
         """
         The logError function is used to log errors in the event that a user does not have logging enabled.
         
-        :param self: Used to access the class variables.
-        :param message: Used to store the error message.
-        :param priority: Used to determine which messages are logged and which aren't.
+            self: Used to access the class variables.
+            message: Used to store the error message.
+            priority: Used to determine which messages are logged and which aren't.
         :return: True.
         :doc-author: Trelent
         """
@@ -2258,9 +2122,9 @@ class DicesAPI(object):
         """
         The logCritical function prints the message to the console and also writes it to a log file if logging is enabled.
         
-        :param self: Used to access the class attributes.
-        :param message: Used to pass the message that needs to be logged.
-        :param priority: Used to determine the level of detail in the log.
+            self: Used to access the class attributes.
+            message: Used to pass the message that needs to be logged.
+            priority: Used to determine the level of detail in the log.
         :return: the log object.
         :doc-author: Trelent
         """
@@ -2275,9 +2139,9 @@ class DicesAPI(object):
         """
         The getSpeeches function retrieves speeches from the API and returns them as a SpeechGroup object.
         
-        :param self: Used to refer to the object instance.
-        :param progress=False: Used to turn off the progress bar.
-        :param **kwargs: Used to pass a variable number of keyword arguments to a function.
+            self: Used to refer to the object instance.
+            progress=False: Used to turn off the progress bar.
+            **kwargs: Used to pass a variable number of keyword arguments to a function.
         :return: a list of speeches.
         :doc-author: Trelent
         """
@@ -2299,9 +2163,9 @@ class DicesAPI(object):
         """
         The getClusters function retrieves the clusters from the API and returns them as a list of Cluster objects.
         
-        :param self: Used to access the API object's properties.
-        :param progress=False: Used to turn off the progress bar.
-        :param **kwargs: Used to pass a variable number of keyword arguments to a function.
+            self: Used to access the API object's properties.
+            progress=False: Used to turn off the progress bar.
+            **kwargs: Used to pass a variable number of keyword arguments to a function.
         :return: a list of clusters.
         :doc-author: Trelent
         """
@@ -2322,9 +2186,9 @@ class DicesAPI(object):
         """
         The getCharacters function retrieves a list of characters from the Marvel API.
         
-        :param self: Used to refer to the object instance itself.
-        :param progress=False: Used to tell the function to not display a progress bar.
-        :param **kwargs: Used to pass a variable number of arguments to a function.
+            self: Used to refer to the object instance itself.
+            progress=False: Used to tell the function to not display a progress bar.
+            **kwargs: Used to pass a variable number of arguments to a function.
         :return: a list of _Character objects.
         :doc-author: Trelent
         """
@@ -2345,9 +2209,9 @@ class DicesAPI(object):
         """
         The getWorks function is used to fetch works from the API.
         
-        :param self: Used to refer to the object itself.
-        :param progress=False: Used to tell the function whether or not to print out a progress bar.
-        :param **kwargs: Used to pass a dictionary of key-value pairs to the API.
+            self: Used to refer to the object itself.
+            progress=False: Used to tell the function whether or not to print out a progress bar.
+            **kwargs: Used to pass a dictionary of key-value pairs to the API.
         :return: a WorkGroup object.
         :doc-author: Trelent
         """
@@ -2365,13 +2229,13 @@ class DicesAPI(object):
         """
         The getAuthors function is used to retrieve a list of authors from the API.
         
-        :param self: Used to access the API object's properties.
-        :param progress=False: Used to tell the function not to display a progress bar.
-        :param **kwargs: Used to pass keyworded variable length of arguments to a function.
+            self: Used to access the API object's properties.
+            progress=False: Used to tell the function not to display a progress bar.
+            **kwargs: Used to pass keyworded variable length of arguments to a function.
         :return: a _AuthorGroup object.
         :doc-author: Trelent
         """
-        '''Fetch authors from the API'''
+
         self.logThis("Attempting to fetch a AuthorGroup", self.LOG_MEDDETAIL)
 
         results = self.getPagedJSON('authors', dict(**kwargs), progress=progress)
@@ -2386,9 +2250,9 @@ class DicesAPI(object):
         The getInstances function specifically accomplishes the following:
             1.
         
-        :param self: Used to access the class variables.
-        :param progress=False: Used to specify if the function should display a progress bar.
-        :param **kwargs: Used to pass a variable number of keyword arguments to the function.
+            self: Used to access the class variables.
+            progress=False: Used to specify if the function should display a progress bar.
+            **kwargs: Used to pass a variable number of keyword arguments to the function.
         :return: a list of dictionaries.
         :doc-author: Trelent
         """
@@ -2405,8 +2269,8 @@ class DicesAPI(object):
         """
         The indexedAuthor function creates an author object from the data that is passed to it.
         
-        :param self: Used to access the class variables.
-        :param data: Used to pass the data from the API to this function.
+            self: Used to access the class variables.
+            data: Used to pass the data from the API to this function.
         :return: a new author object if the id doesn't exist in the index, and an existing object if it does.
         :doc-author: Trelent
         """
@@ -2427,8 +2291,8 @@ class DicesAPI(object):
         """
         The indexedWork function creates a new work object and adds it to the index.
         
-        :param self: Used to access the class attributes.
-        :param data: Used to pass the work data to the Work class.
+            self: Used to access the class attributes.
+            data: Used to pass the work data to the Work class.
         :return: the work if it is already in the index.
         :doc-author: Trelent
         """
@@ -2449,8 +2313,8 @@ class DicesAPI(object):
         """
         The indexedSpeech function creates a speech object from the data that is passed to it.
         
-        :param self: Used to reference the class instance.
-        :param data: Used to pass the speech data to the Speech class.
+            self: Used to reference the class instance.
+            data: Used to pass the speech data to the Speech class.
         :return: the speech object that is created.
         :doc-author: Trelent
         """
@@ -2472,8 +2336,8 @@ class DicesAPI(object):
         If the ID of the speech cluster is already present in the index, it will fetch that object from cache. 
         Otherwise, it will create a new SpeechCluster object and add it to both memory and disk cache.
         
-        :param self: Reference the class instance
-        :param data: Pass the data from the api call
+            self: Reference the class instance
+            data: Pass the data from the api call
         :return: A speechcluster object
         :doc-author: Trelent
         """
@@ -2495,8 +2359,8 @@ class DicesAPI(object):
         The indexedCharacter function is used to create a character in the index. If the character already exists, it is recycled and returned.
         Otherwise, a new Character object is created with the data passed in as an argument.
         
-        :param self: Reference the class instance
-        :param data: Pass in the json data for the character
+            self: Reference the class instance
+            data: Pass in the json data for the character
         :return: A character object
         :doc-author: Trelent
         """
@@ -2520,8 +2384,8 @@ class DicesAPI(object):
         The indexedCharacterInstance function is used to create a character instance in the index. If the character instance already exists, it is fetched from the index.
         
         
-        :param self: Access the api object's properties
-        :param data: Pass the data from the api to characterinstance
+            self: Access the api object's properties
+            data: Pass the data from the api to characterinstance
         :return: A characterinstance object
         :doc-author: Trelent
         """

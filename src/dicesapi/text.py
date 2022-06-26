@@ -46,18 +46,9 @@ class Passage(object):
         self.cltk = None
         self._line_index = None
         self._token_index = None
+        self.text = None
     
-    
-    @property
-    def text(self):
-        '''Return text as a single string'''
         
-        if self.line_array is None:
-            return None
-            
-        return ' '.join(l['text'] for l in self.line_array)
-    
-    
     def buildLineArray(self):
         '''Parse CTS passage into lines'''
         
@@ -86,15 +77,20 @@ class Passage(object):
         for i in range(len(self.line_array)):
             self._line_index.append(cumsum)
             cumsum += len(self.line_array[i]['text']) + 1
+            
+        self.text = ' '.join(l['text'] for l in self.line_array)
     
             
-    def runCltkPipeline(self):
+    def runCltkPipeline(self, index=True):
         '''Parse text with CLTK pipeline to populate cltk_doc'''
 
         if self.text is None:
             return
 
         self.cltk = cltk_nlp[self.speech.lang](self.text)
+        
+        if index:
+            self.buildCltkTokenIndex()
         
     
     def buildCltkTokenIndex(self):

@@ -27,12 +27,12 @@ class FilterParams(object):
     SPEECH_TYPE_GENERAL='G'
 
 
-class _DataGroup(object):
+class DataGroup(object):
     '''Parent class for all DataGroups used to hold objects from the API'''
 
     PREDEF_HEADERS = []
     def __init__(self, things=None, api=None):
-        """Creates a new _DataGroup
+        """Creates a new DataGroup
         
         Args:
             things (list): Things is a dictionary that is used to store info on the objects in the DataGroup
@@ -126,7 +126,7 @@ class _DataGroup(object):
     
     @property
     def list(self):
-        """Returns the contents of the _DataGroup as a list."""
+        """Returns the contents of the DataGroup as a list."""
         
         return [x for x in self._things]
 
@@ -152,15 +152,15 @@ class _DataGroup(object):
         """Return a new DataGroup containing items common to self, other
 
         Args:
-            other (_DataGroup): The data group to intersect with
+            other (DataGroup): The data group to intersect with
         
         Returns: 
             A new DataGroup.
         """
         
         self.api.logThis("Attempting to intersect a " + self.__class__.__name__[1:], self.api.LOG_MEDDETAIL)
-        if(isinstance(datagroup, self.__class__)):
-            return type(self)([thing for thing in self._things if thing in datagroup], self.api)
+        if(isinstance(other, self.__class__)):
+            return type(self)([thing for thing in self if thing in other], self.api)
         else:
             self.api.logWarning("Could not intersect the given datagroup because of conflicting classes, skipping", self.api.LOG_LOWDETAIL)
             return type(self)([], self.api)
@@ -195,7 +195,7 @@ class _DataGroup(object):
             values (list): List of allowable values
         
         Returns:
-            A new _DataGroup
+            A new DataGroup
         """
 
         self.api.logThis("Filtering " + self.__class__.__name__[1:] + " for members of a list", self.api.LOG_MEDDETAIL)
@@ -285,7 +285,7 @@ class _DataGroup(object):
         
 
 
-class _AuthorGroup(_DataGroup):
+class AuthorGroup(DataGroup):
     '''Datagroup used to hold a list of Authors'''
     PREDEF_HEADERS = ["name"]
 
@@ -335,7 +335,7 @@ class _AuthorGroup(_DataGroup):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " names returned no entries", self.api.LOG_LOWDETAIL)
-        return _AuthorGroup(newlist, api=self.api)
+        return AuthorGroup(newlist, api=self.api)
     
 
     def filterIDs(self, ids, incl_none=False):
@@ -356,7 +356,7 @@ class _AuthorGroup(_DataGroup):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " IDs returned no entries", self.api.LOG_LOWDETAIL)
-        return _AuthorGroup(newlist, self.api)
+        return AuthorGroup(newlist, self.api)
 
 
     def filterWDs(self, wds, incl_none=False):
@@ -377,7 +377,7 @@ class _AuthorGroup(_DataGroup):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " WD's returned no entries", self.api.LOG_LOWDETAIL)
-        return _AuthorGroup(newlist, self.api)
+        return AuthorGroup(newlist, self.api)
 
 
     def filterUrns(self, urns, incl_none=False):
@@ -398,7 +398,7 @@ class _AuthorGroup(_DataGroup):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " Urn's returned no entries", self.api.LOG_LOWDETAIL)
-        return _AuthorGroup(newlist, self.api)
+        return AuthorGroup(newlist, self.api)
 
 
 class Author(object):
@@ -444,7 +444,7 @@ class Author(object):
             self.urn = data['urn']
 
 
-class _WorkGroup(_DataGroup):
+class WorkGroup(DataGroup):
     '''Datagroup used to hold a list of works'''
 
     def __init__(self, things=None, api=None):
@@ -480,9 +480,12 @@ class _WorkGroup(_DataGroup):
         return [x.lang for x in self._things]
 
 
-    def getAuthors(self):
+    def getAuthors(self, flatten=False):
         '''Returns a list of Authors'''
-        return _AuthorGroup([x.author for x in self._things])
+        auths = [x.author for x in self._things]
+        if flatten:
+            auths = AuthorGroup(list(set(auths)), api=self.api)
+        return auths
 
 
     def filterIDs(self, ids, incl_none=False):
@@ -503,7 +506,7 @@ class _WorkGroup(_DataGroup):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " ID's returned no entries", self.api.LOG_LOWDETAIL)
-        return _WorkGroup(newlist, self.api)
+        return WorkGroup(newlist, self.api)
 
 
     def filterTitles(self, titles, incl_none=False):
@@ -524,7 +527,7 @@ class _WorkGroup(_DataGroup):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " Title's returned no entries", self.api.LOG_LOWDETAIL)
-        return _WorkGroup(newlist, self.api)
+        return WorkGroup(newlist, self.api)
 
 
     def filterWDs(self, wds, incl_none=False):
@@ -545,7 +548,7 @@ class _WorkGroup(_DataGroup):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " WD's returned no entries", self.api.LOG_LOWDETAIL)
-        return _WorkGroup(newlist, self.api)
+        return WorkGroup(newlist, self.api)
 
 
     def filterUrns(self, urns, incl_none=False):
@@ -566,7 +569,7 @@ class _WorkGroup(_DataGroup):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " Urn's returned no entries", self.api.LOG_LOWDETAIL)
-        return _WorkGroup(newlist, self.api)
+        return WorkGroup(newlist, self.api)
 
 
     def filterAuthors(self, authors, incl_none=False):
@@ -587,7 +590,7 @@ class _WorkGroup(_DataGroup):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " Author's returned no entries", self.api.LOG_LOWDETAIL)
-        return _WorkGroup(newlist, self.api)
+        return WorkGroup(newlist, self.api)
         
         
     def filterLangs(self, langs, incl_none=False):
@@ -608,7 +611,7 @@ class _WorkGroup(_DataGroup):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " Lang's returned no entries", self.api.LOG_LOWDETAIL)
-        return _WorkGroup(newlist, self.api)
+        return WorkGroup(newlist, self.api)
 
 
 class Work(object):
@@ -666,7 +669,7 @@ class Work(object):
             data['author'] = self.author
 
 
-class _CharacterGroup(_DataGroup):
+class CharacterGroup(DataGroup):
     '''Datagroup used to hold a list of Characters'''
     
     PREDEF_HEADERS = ["name"]
@@ -731,7 +734,7 @@ class _CharacterGroup(_DataGroup):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " ID's returned no entries", self.api.LOG_LOWDETAIL)
-        return _CharacterGroup(newlist, self.api)
+        return CharacterGroup(newlist, self.api)
 
 
     def filterNames(self, names, incl_none=False):
@@ -752,7 +755,7 @@ class _CharacterGroup(_DataGroup):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " Name's returned no entries", self.api.LOG_LOWDETAIL)
-        return _CharacterGroup(newlist, self.api)
+        return CharacterGroup(newlist, self.api)
 
 
     def filterBeings(self, beings, incl_none=False):
@@ -773,7 +776,7 @@ class _CharacterGroup(_DataGroup):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " Being's returned no entries", self.api.LOG_LOWDETAIL)
-        return _CharacterGroup(newlist, self.api)
+        return CharacterGroup(newlist, self.api)
 
 
     def filterNumbers(self, numbers, incl_none=False):
@@ -794,7 +797,7 @@ class _CharacterGroup(_DataGroup):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " Number's returned no entries", self.api.LOG_LOWDETAIL)
-        return _CharacterGroup(newlist, self.api)
+        return CharacterGroup(newlist, self.api)
 
 
     def filterWDs(self, wds, incl_none=False):
@@ -815,7 +818,7 @@ class _CharacterGroup(_DataGroup):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " WD's returned no entries", self.api.LOG_LOWDETAIL)
-        return _CharacterGroup(newlist, self.api)
+        return CharacterGroup(newlist, self.api)
 
 
     def filterMantos(self, mantos, incl_none=False):
@@ -836,7 +839,7 @@ class _CharacterGroup(_DataGroup):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " Manto's returned no entries", self.api.LOG_LOWDETAIL)
-        return _CharacterGroup(newlist, self.api)
+        return CharacterGroup(newlist, self.api)
 
 
     def filterGenders(self, genders, incl_none=False):
@@ -857,7 +860,7 @@ class _CharacterGroup(_DataGroup):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " Gender's returned no entries", self.api.LOG_LOWDETAIL)
-        return _CharacterGroup(newlist, self.api)
+        return CharacterGroup(newlist, self.api)
 
 
 class Character(object):
@@ -913,7 +916,7 @@ class Character(object):
             self.manto = data['manto']
 
 
-class _CharacterInstanceGroup(_DataGroup):
+class CharacterInstanceGroup(DataGroup):
     '''Datagroup used to hold a list of Character Instances'''
 
     PREDEF_HEADERS = ["name"]
@@ -935,9 +938,12 @@ class _CharacterInstanceGroup(_DataGroup):
         return [x.context for x in self._things]
     
 
-    def getChars(self):
+    def getChars(self, flatten=False):
         '''Returns a list of character instance Character's'''
-        return _CharacterGroup([x.char for x in self._things])
+        chars = [x.char for x in self._things]
+        if flatten:
+            chars = CharacterGroup(chars, api=self.api)
+        return chars
     
 
     def getDisgs(self):
@@ -988,7 +994,7 @@ class _CharacterInstanceGroup(_DataGroup):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " ID's returned no entries", self.api.LOG_LOWDETAIL)
-        return _CharacterInstanceGroup(newlist, self.api)
+        return CharacterInstanceGroup(newlist, self.api)
     
 
     def filterContexts(self, contexts, incl_none=False):
@@ -1009,7 +1015,7 @@ class _CharacterInstanceGroup(_DataGroup):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " Context's returned no entries", self.api.LOG_LOWDETAIL)
-        return _CharacterInstanceGroup(newlist ,self.api)
+        return CharacterInstanceGroup(newlist ,self.api)
 
 
     def filterChars(self, chars, incl_none=False):
@@ -1030,7 +1036,7 @@ class _CharacterInstanceGroup(_DataGroup):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " Char's returned no entries", self.api.LOG_LOWDETAIL)
-        return _CharacterInstanceGroup(newlist, self.api)
+        return CharacterInstanceGroup(newlist, self.api)
 
 
     def filterNames(self, names, incl_none=False):
@@ -1051,7 +1057,7 @@ class _CharacterInstanceGroup(_DataGroup):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " Name's returned no entries", self.api.LOG_LOWDETAIL)
-        return _CharacterInstanceGroup(newlist, self.api)
+        return CharacterInstanceGroup(newlist, self.api)
 
 
     def filterBeings(self, beings, incl_none=False):
@@ -1072,7 +1078,7 @@ class _CharacterInstanceGroup(_DataGroup):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " Being's returned no entries", self.api.LOG_LOWDETAIL)
-        return _CharacterInstanceGroup(newlist, self.api)
+        return CharacterInstanceGroup(newlist, self.api)
 
 
     def filterNumbers(self, numbers, incl_none=False):
@@ -1093,7 +1099,7 @@ class _CharacterInstanceGroup(_DataGroup):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " Number's returned no entries", self.api.LOG_LOWDETAIL)
-        return _CharacterInstanceGroup(newlist, self.api)
+        return CharacterInstanceGroup(newlist, self.api)
 
 
     def filterGenders(self, genders, incl_none=False):
@@ -1114,7 +1120,7 @@ class _CharacterInstanceGroup(_DataGroup):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " Gender's returned no entries", self.api.LOG_LOWDETAIL)
-        return _CharacterInstanceGroup(newlist, self.api)
+        return CharacterInstanceGroup(newlist, self.api)
 
 
 class CharacterInstance(object):
@@ -1124,16 +1130,13 @@ class CharacterInstance(object):
         self.api = api
         self.index = (api is not None and index is not None)        
         self.id = None
+        self.name = None
         self.context = None
         self.char = None
         self.disg = None
         self.number = None
         self.being = None
         self.anon = None
-        self._name = None
-        self._being = None
-        self._number = None
-        self._gender = None
         self._attributes = data
 
         if data:
@@ -1192,9 +1195,15 @@ class CharacterInstance(object):
         if self.char is not None:
             return self.char.wd
 
+    @property
+    def manto(self):
+        '''returns MANTO id of underlying Character'''
+        if self.char is not None:
+            return self.char.manto
 
 
-class _SpeechClusterGroup(_DataGroup):
+
+class SpeechClusterGroup(DataGroup):
     '''Datagroup used to hold a list of Speech Cluster's'''
 
     def __init__(self, things=None, api=None):
@@ -1228,7 +1237,7 @@ class _SpeechClusterGroup(_DataGroup):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " ID's returned no entries", self.api.LOG_LOWDETAIL)
-        return _SpeechClusterGroup(newlist, self.api)
+        return SpeechClusterGroup(newlist, self.api)
 
 
 class SpeechCluster(object):
@@ -1250,14 +1259,14 @@ class SpeechCluster(object):
         '''True if initial speeches in seq order'''
         
         if(isinstance(other, self.__class__)):
-            return self.getFirst().seq < other.getFirst().seq
+            return self.getFirstSpeech().seq < other.getFirstSpeech().seq
         else:
             self.api.logWarning("Cannot compare objects of different classes", 
                                     self.api.LOG_LOWDETAIL)
             raise TypeError
 
     def __repr__(self):
-        incipit = self.getFirst()
+        incipit = self.getFirstSpeech()
         loc = f'{incipit.work.title} {incipit.l_fi} ff.'
         return f'<SpeechCluster {self.id}: {loc}>'
 
@@ -1276,15 +1285,12 @@ class SpeechCluster(object):
                 self.work = Work(data['work'], api=self.api)
             data['work'] = self.work
 
-    @property
-    def speeches(self):
+
+    def getSpeeches(self):
         return self.api.getSpeeches(cluster_id=self.id)
     
-    def countSpeeches(self):
-        return len(self.speeches)
     
-
-    def getFirst(self):
+    def getFirstSpeech(self):
         """Return the first speech of a cluster"""
         
         if self._first is None:
@@ -1331,7 +1337,7 @@ class SpeechCluster(object):
         return interruptions
 
 
-class _SpeechGroup(_DataGroup):
+class SpeechGroup(DataGroup):
     '''Datagroup used to hold a list of Speeches'''
 
     def __init__(self, things=None, api=None):
@@ -1347,9 +1353,13 @@ class _SpeechGroup(_DataGroup):
         return [x.id for x in self._things]
     
 
-    def getClusters(self):
+    def getClusters(self, flatten=False):
         '''Returns a list of Speech Clusters'''
-        return _SpeechClusterGroup([x.cluster for x in self._things], api=self.api)
+        clusters = [x.cluster for x in self._things]
+        
+        if flatten:
+            clusters = SpeechClusterGroup(list(set(clusters)), api=self.api)
+        return clusters
     
 
     def getSeqs(self):
@@ -1357,12 +1367,12 @@ class _SpeechGroup(_DataGroup):
         return [x.seq for x in self._things]
     
 
-    def get_L_FIs(self):
+    def getL_fis(self):
         '''Returns a list of Speech First Lines'''
         return [x.l_fi for x in self._things]
     
 
-    def get_L_LAs(self):
+    def getL_las(self):
         '''Returns a list of Speech Last Lines'''
         return [x.l_la for x in self._things]
     
@@ -1380,11 +1390,11 @@ class _SpeechGroup(_DataGroup):
             list or CharacterInstanceGroup
         '''
 
-        spkrs = [s.spkr for s in self.speeches]
+        spkrs = [x.spkr for x in self._things]
         
         if flatten:
             spkrs = set(inst for spkr_list in spkrs for inst in spkr_list)
-            spkrs = _CharacterInstanceGroup(list(spkrs), api=self.api)
+            spkrs = CharacterInstanceGroup(list(spkrs), api=self.api)
         
         return spkrs
 
@@ -1402,28 +1412,33 @@ class _SpeechGroup(_DataGroup):
             list or CharacterInstanceGroup
         '''
 
-        addrs = [s.addr for s in self.speeches]
+        addrs = [x.addr for x in self._things]
         
         if flatten:
             addrs = set(inst for addr_list in addrs for inst in addr_list)
-            addrs = _CharacterInstanceGroup(list(addrs), api=self.api)
+            addrs = CharacterInstanceGroup(list(addrs), api=self.api)
         
         return addrs
 
 
     def getParts(self):
         '''Returns the `part` attrs of member speeches as a list'''
-        return [s.part for s in self.speeches]
+        return [x.part for x in self._things]
 
 
     def getTypes(self):
         '''Returns the `type` attrs of member speeches as a list'''
-        return [s.type for s in self.speeches]
+        return [x.type for x in self._things]
 
 
-    def getWorks(self):
+    def getWorks(self, flatten=False):
         '''Returns the works of '''
-        return [s.work for s in self.speeches]
+        
+        works = [x.work for x in self._things]
+        if flatten:
+            works = WorkGroup(list(set(works)), api=self.api)
+        
+        return works
 
 
     def filterIDs(self, ids, incl_none=False):
@@ -1444,7 +1459,7 @@ class _SpeechGroup(_DataGroup):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " ID's returned no entries", self.api.LOG_LOWDETAIL)
-        return _SpeechGroup(newlist, self.api)
+        return SpeechGroup(newlist, self.api)
 
 
     def filterClusters(self, clusters, incl_none=False):
@@ -1465,7 +1480,7 @@ class _SpeechGroup(_DataGroup):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " Cluster's returned no entries", self.api.LOG_LOWDETAIL)
-        return _SpeechGroup(newlist, self.api)
+        return SpeechGroup(newlist, self.api)
 
 
     def filterSeqs(self, seqs, incl_none=False):
@@ -1487,10 +1502,10 @@ class _SpeechGroup(_DataGroup):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " Seq's returned no entries", self.api.LOG_LOWDETAIL)
-        return _SpeechGroup(newlist, self.api)
+        return SpeechGroup(newlist, self.api)
 
 
-    def filterL_FIs(self, l_fis, incl_none=False):
+    def filterL_fis(self, l_fis, incl_none=False):
         """
         The filterL_FIs function specifically filters the list of things along the L_FI's.
         
@@ -1508,10 +1523,10 @@ class _SpeechGroup(_DataGroup):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " L_FI's returned no entries", self.api.LOG_LOWDETAIL)
-        return _SpeechGroup(newlist, self.api)
+        return SpeechGroup(newlist, self.api)
 
 
-    def filterL_LAs(self, l_las, incl_none=False):
+    def filterL_ls(self, l_las, incl_none=False):
         """
         The filterL_LAs function specifically filters the list of things along the L_LA's.
         
@@ -1529,7 +1544,7 @@ class _SpeechGroup(_DataGroup):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " L_LA's returned no entries", self.api.LOG_LOWDETAIL)
-        return _SpeechGroup(newlist, self.api)
+        return SpeechGroup(newlist, self.api)
 
 
     def filterSpkrInstances(self, spkrs, incl_none=False):
@@ -1550,7 +1565,7 @@ class _SpeechGroup(_DataGroup):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " Speaker Instance's returned no entries", self.api.LOG_LOWDETAIL)
-        return _SpeechGroup(newlist ,self.api)
+        return SpeechGroup(newlist ,self.api)
 
 
     def filterSpkrs(self, spkrs, incl_none=False):
@@ -1572,7 +1587,7 @@ class _SpeechGroup(_DataGroup):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " Speaker's returned no entries", self.api.LOG_LOWDETAIL)
-        return _SpeechGroup(newlist, self.api)
+        return SpeechGroup(newlist, self.api)
 
 
     def filterAddrInstances(self, addrs, incl_none=False):
@@ -1594,7 +1609,7 @@ class _SpeechGroup(_DataGroup):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " Addressee Instance's returned no entries", self.api.LOG_LOWDETAIL)
-        return _SpeechGroup(newlist, self.api)
+        return SpeechGroup(newlist, self.api)
 
 
     def filterAddrs(self, addrs, incl_none=False):
@@ -1615,7 +1630,7 @@ class _SpeechGroup(_DataGroup):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " Addressee's returned no entries", self.api.LOG_LOWDETAIL)
-        return _SpeechGroup(newlist, self.api )
+        return SpeechGroup(newlist, self.api )
 
 
     def filterParts(self, parts, incl_none=False):
@@ -1636,7 +1651,7 @@ class _SpeechGroup(_DataGroup):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " Part's returned no entries", self.api.LOG_LOWDETAIL)
-        return _SpeechGroup(newlist, self.api)
+        return SpeechGroup(newlist, self.api)
 
 
     def filterTypes(self, types, incl_none=False):
@@ -1657,7 +1672,7 @@ class _SpeechGroup(_DataGroup):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " Type's returned no entries", self.api.LOG_LOWDETAIL)
-        return _SpeechGroup(newlist, self.api)
+        return SpeechGroup(newlist, self.api)
 
 
     def filterWorks(self, works, incl_none=False):
@@ -1678,7 +1693,7 @@ class _SpeechGroup(_DataGroup):
                 newlist.append(thing)
         if len(newlist) == 0:
             self.api.logWarning("Filtering " + self.__class__.__name__[1:] + " Work's returned no entries", self.api.LOG_LOWDETAIL)
-        return _SpeechGroup(newlist, self.api)
+        return SpeechGroup(newlist, self.api)
 
 
 class Speech(object):
@@ -1834,6 +1849,16 @@ class Speech(object):
         '''cts urn for the passage'''
         return f'{self.work.urn}:{self.l_range}'
     
+    
+    def getSpkrString(self, sep=', '):
+        ''''Returns speaker names as a single string'''
+        return sep.join(inst.name for inst in self.spkr)
+
+
+    def getAddrString(self, sep=', '):
+        ''''Returns speaker names as a single string'''
+        return sep.join(inst.name for inst in self.addr)
+
     
     def getCTS(self):
         """
@@ -2152,7 +2177,7 @@ class DicesAPI(object):
         results = self.getPagedJSON('speeches', dict(**kwargs), progress=progress)
         
         # convert to Speech objects
-        speeches = _SpeechGroup([self.indexedSpeech(s) for s in results], api=self)
+        speeches = SpeechGroup([self.indexedSpeech(s) for s in results], api=self)
 
         self.logThis("Successfully retrieved a list of speeches", self.LOG_MEDDETAIL)
         
@@ -2176,7 +2201,7 @@ class DicesAPI(object):
         results = self.getPagedJSON('clusters', dict(**kwargs), progress=progress)
         
         # convert to Clusters objects
-        clusters = _SpeechClusterGroup([self.indexedSpeechCluster(s) for s in results], api=self)
+        clusters = SpeechClusterGroup([self.indexedSpeechCluster(s) for s in results], api=self)
         self.logThis("Successfully retrieved a list of clusters", self.LOG_MEDDETAIL)
         
         return clusters
@@ -2199,7 +2224,7 @@ class DicesAPI(object):
         results = self.getPagedJSON('characters', dict(**kwargs), progress=progress)
         
         # convert to Character objects
-        characters = _CharacterGroup([self.indexedCharacter(c) for c in results], api=self)
+        characters = CharacterGroup([self.indexedCharacter(c) for c in results], api=self)
         self.logThis("Successfully retrieved a list of characters", self.LOG_MEDDETAIL)
         
         return characters
@@ -2220,7 +2245,7 @@ class DicesAPI(object):
         
         results = self.getPagedJSON('works', dict(**kwargs), progress=progress)
 
-        works = _WorkGroup([self.indexedWork(w) for w in results], api=self)
+        works = WorkGroup([self.indexedWork(w) for w in results], api=self)
         self.logThis("Successfully retrieved a list of works", self.LOG_MEDDETAIL)
         return works
 
@@ -2232,7 +2257,7 @@ class DicesAPI(object):
             self: Used to access the API object's properties.
             progress=False: Used to tell the function not to display a progress bar.
             **kwargs: Used to pass keyworded variable length of arguments to a function.
-        :return: a _AuthorGroup object.
+        :return: a AuthorGroup object.
         :doc-author: Trelent
         """
 
@@ -2240,7 +2265,7 @@ class DicesAPI(object):
 
         results = self.getPagedJSON('authors', dict(**kwargs), progress=progress)
 
-        authors = _AuthorGroup([self.indexedAuthor(a) for a in results], api=self)
+        authors = AuthorGroup([self.indexedAuthor(a) for a in results], api=self)
         self.logThis("Successfully retrieved a list of authors", self.LOG_MEDDETAIL)
         return authors
 
@@ -2260,7 +2285,7 @@ class DicesAPI(object):
         self.logThis("Attempting to fetch a CharacterInstanceGroup", self.LOG_MEDDETAIL)  
         results = self.getPagedJSON('instances', dict(**kwargs), progress=progress)
 
-        instances = _CharacterInstanceGroup([self.indexedCharacterInstance(i) for i in results], api=self)
+        instances = CharacterInstanceGroup([self.indexedCharacterInstance(i) for i in results], api=self)
         self.logThis("Successfully retrieved a list of character instances", self.LOG_MEDDETAIL)
         return instances
         

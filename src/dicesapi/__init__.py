@@ -1926,7 +1926,7 @@ class Speech(object):
 class DicesAPI(object):
     '''a connection to the DICES API'''
     
-    DEFAULT_API = 'http://csa20211203-005.uni-rostock.de/api/'
+    DEFAULT_API = 'http://dices.ub.uni-rostock.de/api/'
     DEFAULT_CTS = 'https://scaife-cts.perseus.org/api/cts'
 
     LOG_HIGHDETAIL=3

@@ -23,6 +23,10 @@ cltk_nlp = dict(
 cltk_nlp['latin'].pipeline.processes = cltk_nlp['latin'].pipeline.processes[:2]
 cltk_nlp['greek'].pipeline.processes = cltk_nlp['greek'].pipeline.processes[:2]
 
+# trigger installation of stanza data
+cltk_nlp['greek']('χαίρε, ὦ κόσμος')
+cltk_nlp['latin']('salve, mundus')
+
 #
 # definitions
 #

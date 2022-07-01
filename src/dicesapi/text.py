@@ -10,8 +10,6 @@ import re
 
 DEFAULT_SERVERS = {None: 'https://scaife-cts.perseus.org/api/cts'}
 
-__cts_cache__ = {}
-__cltk_cache__ = {}
 
 #
 # setup default NLP pipelines
@@ -176,6 +174,7 @@ class CtsAPI(object):
         self.dices_api = dices_api
         self._servers = servers
         self._resolvers = self._buildResolvers()
+        self.__cts_cache__ = {}
     
     def _buildResolvers(self):
         '''create a set of urn-specific resolvers'''
@@ -194,11 +193,12 @@ class CtsAPI(object):
     def getCTS(self, speech, force_download=False, cache=True):
         '''Fetch the CTS passage corresponding to the speech'''
         
-        # return cached version if exists
-        cache_key = f'{speech.work.urn}:{speech.l_range}'
-        if cache_key in __cts_cache__:
-            if not force_download:
-                return __cts_cache__[cache_key]
+        if cache:
+            # return cached version if exists
+            cache_key = f'{speech.work.urn}:{speech.l_range}'
+            if cache_key in self.__cts_cache__:
+                if not force_download:
+                    return self.__cts_cache__[cache_key]
         
         # bail out if work has no urn
         if (speech.work.urn == '') or (speech.work.urn is None):
@@ -217,7 +217,7 @@ class CtsAPI(object):
 
         # cache
         if cache:
-            __cts_cache__[cache_key] = cts_passage
+            self.__cts_cache__[cache_key] = cts_passage
 
         return cts_passage
         
@@ -236,7 +236,6 @@ class CtsAPI(object):
 
         if cltk:    
             p.runCltkPipeline()
-            p.buildCltkTokenIndex()
         
         return p
         

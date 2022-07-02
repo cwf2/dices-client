@@ -15,6 +15,7 @@ class Tie():
     '''Collection of values for MANTO ties'''
     SON = '31764'
     DAUGHTER = '31765'
+    PLACE_OF_DEATH = '32529'
 
 
 class MantoEntity(object):
@@ -54,8 +55,9 @@ class MantoEntity(object):
                         ).get('object_definition_value', {})
         alt_names = def_vals.get('18817')
         return(alt_names)
+        
 
-    def getTies(self, ties):
+    def getTies(self, ties, as_ent=True):
         '''Retrieve a set of entities having a given tie to self'''        
         results = []
         
@@ -67,8 +69,10 @@ class MantoEntity(object):
                             ).get(tie, {}
                             ).get('object_definition_ref_object_id', {}
                             ).get(NGID, {})
-            for ent_id in objs:
-                results.append(getMantoID(ent_id))
+            results.extend([ent_id for ent_id in objs])
+                
+        if as_ent:
+            results = [getMantoID(ent_id) for ent_id in results]
         
         return results
 
@@ -158,3 +162,14 @@ def charIsMantoTie(char_a, char_b, ties, err_val=None, debug=DEBUG):
 def charIsChild(char_a, char_b, err_val=None, debug=DEBUG):
     '''True if char_b is one of char_a's parents'''
     return charIsMantoTie(char_a, char_b, [Tie.SON, Tie.DAUGHTER], err_val, debug=debug)
+    
+
+def charTiedIDs(char, ties, debug=DEBUG):
+    '''Return a list of manto ids having ties to character'''
+    
+    manto_ent = getMantoChar(char)
+    
+    if manto_ent is not None:
+        return manto_ent.getTies(ties, as_objects=False)
+    else:
+        return []

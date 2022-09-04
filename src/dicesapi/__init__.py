@@ -1710,6 +1710,7 @@ class Speech(object):
         self.spkr = None
         self.addr = None
         self.part = None
+        self.level = None
         self.type = None
         self.work = None
         self._attributes = data
@@ -1763,6 +1764,8 @@ class Speech(object):
             data['addr'] = self.addr
         if 'part' in data:
             self.part = data['part']
+        if 'level' in data:
+            self.level = data['level']
         if 'type' in data:
             self.type = data['type']
         if 'work' in data:

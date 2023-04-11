@@ -9,6 +9,7 @@ from copy import deepcopy
 import re
 
 DEFAULT_SERVERS = {None: 'https://scaife-cts.perseus.org/api/cts'}
+PUNCT = re.compile(r'[ ,·.;\n—]+')
 
 
 #
@@ -83,13 +84,17 @@ class Passage(object):
         self.text = ' '.join(l['text'] for l in self.line_array)
     
             
-    def runCltkPipeline(self, index=True):
+    def runCltkPipeline(self, index=True, remove_punct=False):
         '''Parse text with CLTK pipeline to populate cltk_doc'''
 
-        if self.text is None:
-            return
+        text = self.text
 
-        self.cltk = cltk_nlp[self.speech.lang](self.text)
+        if text is None:
+            return
+        if remove_punct:
+            text = PUNCT.sub(' ', self.text).strip()
+
+        self.cltk = cltk_nlp[self.speech.lang](text)
         
         if index:
             self.buildCltkTokenIndex()

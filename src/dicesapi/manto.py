@@ -13,6 +13,10 @@ __manto_index__ = {}
 
 class Tie():
     '''Collection of values for MANTO ties'''
+    MOTHER = '31811'
+    FATHER = '27373'
+    WIFE = '31807'
+    HUSBAND = '27374'
     SON = '31764'
     DAUGHTER = '31765'
     PLACE_OF_DEATH = '32529'
@@ -146,11 +150,11 @@ def getMantoChar(char, debug=DEBUG, cache_empty=False):
     return manto_ent
         
 
-def charIsMantoTie(char_a, char_b, ties, err_val=None, debug=DEBUG):
+def charIsMantoTie(char_a, char_b, ties, err_val=None, debug=DEBUG, cache_empty=False):
     '''Compare two DICES Character instances based on MANTO ties'''
     
-    ent_a = getMantoChar(char_a, debug=debug)
-    ent_b = getMantoChar(char_b, debug=debug)
+    ent_a = getMantoChar(char_a, debug=debug, cache_empty=cache_empty)
+    ent_b = getMantoChar(char_b, debug=debug, cache_empty=cache_empty)
     
     if ent_a and ent_b:
         valid = ent_a.getTies(ties)

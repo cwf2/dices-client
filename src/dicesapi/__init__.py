@@ -1175,9 +1175,9 @@ class CharacterInstance(object):
             else:
                 self.char = Character(data['char'], api=self.api)
             data['char'] = self.char
-        if 'disg' in data:
+        if 'disguise' in data:
             # FIXME
-            self.disg = data['disg']
+            self.disg = data['disguise']
         if 'anon' in data:
             self.anon = data['anon']
         if 'name' in data and data['name'] is not None:

@@ -1926,10 +1926,36 @@ class Speech(object):
         return len(speech) > 0 and any(talker in speech[0].addr for talker in self.spkr)
 
 
+class Tag(object):
+    '''A speech type tag'''
+    
+    def __init__(self, data=None):
+        self.api = api
+        self.type = None
+        self.doubt = None
+        self.notes = None
+        self._attributes = data
+
+        if data:
+            self._from_data(data)
+
+        
+    def _from_data(self, data):
+        self.type = dataget('type')
+        self.doubt = data.get('doubt')
+        self.notes = data.get('notes')
+    
+    def __repr__(self):
+        tag = self.type
+        if self.doubt:
+            tag = tag + '?'
+        return f'<Tag: {tag}>'
+
+             
 class DicesAPI(object):
     '''a connection to the DICES API'''
     
-    DEFAULT_API = 'http://csa20211203-005.uni-rostock.de/api/'
+    DEFAULT_API = 'http://dices.ub.uni-rostock.de/api/'
     DEFAULT_CTS = 'https://scaife-cts.perseus.org/api/cts'
 
     LOG_HIGHDETAIL=3

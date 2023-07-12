@@ -876,6 +876,7 @@ class Character(object):
         self.gender = None
         self.wd = None
         self.manto = None
+        self.tt = None
         self._attributes = data
         
         if data:
@@ -914,6 +915,8 @@ class Character(object):
             self.wd = data['wd']
         if 'manto' in data:
             self.manto = data['manto']
+        if 'tt' in data:
+            self.tt = data['tt']
 
 
 class CharacterInstanceGroup(DataGroup):
@@ -1201,6 +1204,11 @@ class CharacterInstance(object):
         if self.char is not None:
             return self.char.manto
 
+    @property
+    def tt(self):
+        '''returns MANTO id of underlying Character'''
+        if self.char is not None:
+            return self.char.tt
 
 
 class SpeechClusterGroup(DataGroup):

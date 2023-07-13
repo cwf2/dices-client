@@ -4,6 +4,7 @@
 from MyCapytain.resolvers.cts.api import HttpCtsResolver
 from MyCapytain.retrievers.cts5 import HttpCtsRetriever
 import cltk
+from cltk.dependency.stanza import StanzaWrapper
 import spacy
 import requests
 from copy import deepcopy

@@ -4,7 +4,6 @@
 from MyCapytain.resolvers.cts.api import HttpCtsResolver
 from MyCapytain.retrievers.cts5 import HttpCtsRetriever
 import cltk
-from cltk.dependency.stanza import StanzaWrapper
 import spacy
 import requests
 from copy import deepcopy
@@ -27,9 +26,6 @@ cltk_nlp = dict(
 cltk_nlp['latin'].pipeline.processes = cltk_nlp['latin'].pipeline.processes[:2]
 cltk_nlp['greek'].pipeline.processes = cltk_nlp['greek'].pipeline.processes[:2]
 
-# trigger installation of stanza data
-StanzaWrapper(language='grc', interactive=False)
-StanzaWrapper(language='lat', interactive=False)
 
 #
 # spacy setup

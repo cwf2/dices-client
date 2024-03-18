@@ -160,7 +160,7 @@ class Passage(object):
             
             # if string not found
             if char_pos == -1:
-                char_pos = None
+                return
             
             self._cltk_token_index.append(char_pos)
             length = len(w.string)

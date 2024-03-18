@@ -238,7 +238,12 @@ class Passage(object):
         else:
             token_index = self._token_index
             
-        return token_index[word]
+        try:
+            idx = token_index[word]
+        except IndexError:
+            idx = None
+            
+        return idx
 
 
     def getLineIndex(self, word):
@@ -250,6 +255,9 @@ class Passage(object):
             return
         
         char_pos = self.getTextPos(word)
+        
+        if char_pos is None:
+            return
         
         for i, length in enumerate(self._line_index):
             if length > char_pos:

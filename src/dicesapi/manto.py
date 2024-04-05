@@ -72,8 +72,10 @@ class MantoEntity(object):
             objs = self.data.get('object_definitions', {}
                             ).get(tie, {}
                             ).get('object_definition_ref_object_id', {}
-                            )[0].get(NGID, {})
-            results.extend([ent_id for ent_id in objs])
+                            )
+            if len(objs) > 0:
+                objs = objs[0].get(NGID, {})
+                results.extend([ent_id for ent_id in objs])
                 
         if as_ent:
             results = [getMantoID(ent_id) for ent_id in results]

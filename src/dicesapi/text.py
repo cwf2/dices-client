@@ -160,7 +160,8 @@ class Passage(object):
             
             # if string not found
             if char_pos == -1:
-                return
+                self._cltk_token_index.append(None)
+                continue
             
             self._cltk_token_index.append(char_pos)
             length = len(w.string)
@@ -184,7 +185,8 @@ class Passage(object):
             
             # bail if string not found
             if char_pos == -1:
-                return
+                self._cltk_token_index.append(None)
+                continue
         
             # otherwise, record position,
             # "cross off" matching string

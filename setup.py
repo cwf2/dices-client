@@ -25,6 +25,7 @@ setuptools.setup(
     python_requires=">=3.10",
     install_requires=[
         "requests",
+        "pandas",
         "cltk",
         "spacy",
         "MyCapytain",

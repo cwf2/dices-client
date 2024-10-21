@@ -1,4 +1,5 @@
 import requests
+import pandas as pd
 import sys
 from MyCapytain.resolvers.cts.api import HttpCtsResolver
 from MyCapytain.retrievers.cts5 import HttpCtsRetriever
@@ -1286,6 +1287,12 @@ class SpeechCluster(object):
             self.id = data['id']
         if 'type' in data:
             self.type = data['type']
+        if 'speeches' in data:
+            if isinstance(data['speeches'], list):
+                if self.index:
+                    self.speeches = []
+                    for s in data['speeches']:
+                        self.speeches.append(self.api.indexedSpeech(s))
         if 'work' in data:
             if self.index:
                 self.work = self.api.indexedWork(data['work'])
@@ -1709,7 +1716,7 @@ class Speech(object):
 
     def __init__(self, data=None, api=None, index=True):
         self.api = api
-        self.index = (api is not None and index is not None)        
+        self.index = (api is not None and index is not None)
         self.id = None
         self.cluster = None
         self.seq = None
@@ -1937,8 +1944,9 @@ class Speech(object):
 class Tag(object):
     '''A speech type tag'''
     
-    def __init__(self, data=None):
+    def __init__(self, data=None, api=None, index=False):
         self.api = api
+        self.index = (api is not None and index is not None)
         self.type = None
         self.doubt = None
         self.notes = None
@@ -1949,7 +1957,7 @@ class Tag(object):
 
         
     def _from_data(self, data):
-        self.type = dataget('type')
+        self.type = data.get('type')
         self.doubt = data.get('doubt')
         self.notes = data.get('notes')
     
@@ -2002,6 +2010,7 @@ class DicesAPI(object):
         self._characterinstance_index = {}
         self._speech_index = {}
         self._speechcluster_index = {}
+        self._tag_index = {}
         self.version = "DEBUG VERSION 1.0"
         self.logThis("Database Initialized", self.LOG_NODETAIL)
 
@@ -2338,15 +2347,36 @@ class DicesAPI(object):
         """
         '''Create an author in the index'''
         
-        if data['id'] in self._author_index:
-            a = self._author_index[data['id']]
-            self.logThis("Fetching author with ID " + str(data['id']), self.LOG_HIGHDETAIL)
+        # if someone has passed an existing author object
+        if isinstance(data, Author):
+            if data.id in self._author_index:
+                if data is not self._author_index[data.id]:
+                    self.logThis("Refused to add non-identical duplicate author ID {data.id} to index", self.LOG_LOWDETAIL)
+                
+            else:
+                if data.api is not self:
+                    self.logThis("Importing author ID {data.id} from other api {data.api}", self.LOG_HIGHDETAIL)
+                    data.api = self
+                else:
+                    self.logThis("Adding a new author with ID {data.id}", self.LOG_HIGHDETAIL)
+                data.index = True
+                self._author_index[data.id] = data
+                
+            return self._author_index[data.id]
+        
+        # if someone has passed just an ID
+        if isinstance(data, int):
+            data = {"id": data}
+        
+        # otherwise, assume JSON data
         else:
-            a = Author(data, api=self, index=True)
-            self._author_index[data['id']] = a
-            self.logThis("Creating new author with ID " + str(data['id']), self.LOG_HIGHDETAIL)
+            if data['id'] in self._author_index:
+                self.logThis("Fetching author with ID " + str(data['id']), self.LOG_HIGHDETAIL)
+            else:
+                self.logThis("Creating new author with ID " + str(data['id']), self.LOG_HIGHDETAIL)
+                self._author_index[data['id']] = Author(data, api=self, index=True)
  
-        return a
+        return self._author_index[data['id']]
 
 
     def indexedWork(self, data):
@@ -2359,6 +2389,9 @@ class DicesAPI(object):
         :doc-author: Trelent
         """
         '''Create a work in the index'''
+        
+        if isinstance(data, int):
+            data = {"id": data}
         
         if data['id'] in self._work_index:
             w = self._work_index[data['id']]
@@ -2381,6 +2414,9 @@ class DicesAPI(object):
         :doc-author: Trelent
         """
         '''Create a speech in the index'''
+        
+        if isinstance(data, int):
+            data = {"id": data}
         
         if data['id'] in self._speech_index:
             s = self._speech_index[data['id']]
@@ -2405,6 +2441,9 @@ class DicesAPI(object):
         """
         '''Create a speech cluster in the index'''
         
+        if isinstance(data, int):
+            data = {"id": data}
+                
         if data['id'] in self._speechcluster_index:
             s = self._speechcluster_index[data['id']]
             self.logThis("Fetching cluster with ID " + str(data['id']), self.LOG_HIGHDETAIL)
@@ -2428,6 +2467,9 @@ class DicesAPI(object):
         """
         '''Create a character in the index'''
         
+        if isinstance(data, int):
+            data = {"id": data}
+                
         if data['id'] in self._character_index:
             #print("Recycling character with ID " + str(data['id']))
             c = self._character_index[data['id']]
@@ -2453,6 +2495,9 @@ class DicesAPI(object):
         """
         '''Create a character instance in the index'''
         
+        if isinstance(data, int):
+            data = {"id": data}
+                
         if data['id'] in self._characterinstance_index:
             c = self._characterinstance_index[data['id']]
             self.logThis("Fetching character instance with ID " + str(data['id']), self.LOG_HIGHDETAIL)
@@ -2462,3 +2507,114 @@ class DicesAPI(object):
             self.logThis("Creating new character instance with ID " + str(data['id']), self.LOG_HIGHDETAIL)
         
         return c
+        
+    # def indexedTag(self, data):
+    #     '''Create a tag in the index'''
+    #
+    #     if isinstance(data, int):
+    #         data = {"id": data}
+    #
+    #     if data['id'] in self._tag_index:
+    #         tag = self._tag_index[data['id']]
+    #         self.logThis("Fetching tag with ID " + str(data['id']), self.LOG_HIGHDETAIL)
+    #     else:
+    #         tag = Tag(data, api=self, index=True)
+    #         self._tag_index[data['id']] = tag
+    #         self.logThis("Creating new tag with ID " + str(data['id']), self.LOG_HIGHDETAIL)
+    #
+    #     return tag
+    
+    def cachedAuthors(self):
+        return AuthorGroup([auth for auth in self._author_index.values()], api=self)
+        
+    def cachedWorks(self):
+        return WorkGroup([work for work in self._work_index.values()], api=self)
+        
+    def cachedCharacters(self):
+        return CharacterGroup([char for char in self._character_index.values()], api=self)
+        
+    def cachedCharacterInstances(self):
+        return CharacterInstanceGroup([inst for inst in self._characterinstance_index.values()], api=self)
+
+    def cachedSpeechClusters(self):
+        return SpeechClusterGroup([cluster for cluster in self._speechcluster_index.values()], api=self)
+        
+    def cachedSpeeches(self):
+        return SpeechGroup([s for s in self._speech_index.values()], api=self)
+        
+    
+    @classmethod
+    def fromGitDump(cls, commit, logdetail=LOG_NODETAIL):
+        '''Create a self-contained dataset from a DB dump saved to GitHub
+        
+            Returns a fake DicesAPI with cached data downloaded from Github, specifically, from the file data/speechdb.json
+        '''
+
+        api = cls(dices_api="", logdetail=logdetail)
+        url = "https://github.com/cwf2/dices/raw/{commit}/data/speechdb.json".format(commit=commit)
+
+        # download json data
+        print(f"Downloading from {url}")
+        res = requests.get(url)
+        if not res.ok:
+            res.raise_for_status()
+        db_dump = res.json()
+
+        # build tables
+        tables = dict(
+            metadata = [],
+            author = [],
+            work = [],
+            character = [],
+            characterinstance = [],
+            speech = [],
+            speechcluster = [],
+            speechtag = []
+        )
+
+        # populate tables
+        for rec in db_dump:
+            model = rec["model"].split(".")[-1]
+            row = rec["fields"]
+            row["id"] = rec["pk"]
+            tables[model].append(row)
+
+        # diagnostic info
+        ts = None
+        for row in tables["metadata"]:
+            if row["name"] == "date":
+                ts = row["value"]
+        print(f"timestamp: {ts}")
+    
+        # add authors
+        for auth in tables["author"]:
+            api.indexedAuthor(auth)
+
+        # add works
+        for work in tables["work"]:
+            api.indexedWork(work)
+
+        # add characters
+        for char in tables["character"]:
+            api.indexedCharacter(char)
+
+        # add character instances
+        for inst in tables["characterinstance"]:
+            api.indexedCharacterInstance(inst)
+
+        # add speech clusters
+        for clust in tables["speechcluster"]:
+            api.indexedSpeechCluster(clust)
+
+        # add speeches
+        for s in tables["speech"]:
+            api.indexedSpeech(s)
+
+        api._raw_data = tables
+        api._git_hash = commit
+    
+        # # add tags
+        # for tag in tables["speechtag"]:
+        #     api.indexedTag(s)
+    
+        return api

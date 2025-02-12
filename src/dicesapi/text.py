@@ -11,8 +11,8 @@ import re
 
 DEFAULT_SERVERS = {None: 'https://scaife-cts.perseus.org/api/cts'}
 PUNCT = r'[ ,·.;\n—‘’“”]+'
-SPACY_MODEL_GREEK = 'grc_proiel_sm'
-SPACY_MODEL_LATIN = 'la_core_web_sm'
+SPACY_MODEL_GREEK = 'grc_odycy_joint_sm'
+SPACY_MODEL_LATIN = 'la_core_web_md'
 
 #
 # setup default NLP pipelines
@@ -276,6 +276,13 @@ class Passage(object):
         i = self.getLineIndex(word)
         
         return char_pos - self._line_index[i]
+
+    
+    def getLine(self, word):
+        '''Return a word's containing line from line_array'''
+        
+        idx = self.getLineIndex(word)
+        return self.line_array[idx]
 
 
     def toHTML(self):

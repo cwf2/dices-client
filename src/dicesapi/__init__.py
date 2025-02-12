@@ -1970,7 +1970,7 @@ class Speech(object):
         if keep.strip().lower().startswith("pref"):
             
             # if there is a prefix
-            if len(parts) > 0:
+            if len(parts) > 1:
                 scalar = parts[0]
                 
                 # add back trailing sep

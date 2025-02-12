@@ -7,6 +7,7 @@ import logging
 import csv
 import re
 
+
 class FilterParams(object):
 
     CHARACTER_GENDER_FEMALE="female"
@@ -1940,6 +1941,66 @@ class Speech(object):
         speech = [speechs for speechs in self.api.getSpeeches(cluster_id=self.cluster.id) if speechs.seq == self.seq - 1]
         return len(speech) > 0 and any(talker in speech[0].addr for talker in self.spkr)
 
+
+    def splitLocus(self, loc=None, sep=".", max_split=-1, alpha=True, keep="all", trailing=False):
+        """
+        Return components of the locus as a list of strings
+        """
+        
+        if loc is None:
+            loc = self.l_fi
+        elif loc.strip().lower() == "first":
+            loc = self.l_fi
+        elif loc.strip().lower() == "last":
+            loc = self.l_la
+        
+        if sep in loc:
+            parts = loc.split(sep, max_split)
+        else:
+            parts = [loc]
+        
+        # remove extra whitespace
+        parts = [part.strip() for part in parts]
+        
+        # get rid of non-numeric characters
+        if not alpha:
+            parts = [re.sub("[^0-9]", "", part) for part in parts]
+                
+        # option 1. keep prefix
+        if keep.strip().lower().startswith("pref"):
+            
+            # if there is a prefix
+            if len(parts) > 0:
+                scalar = parts[0]
+                
+                # add back trailing sep
+                if trailing:
+                    scalar = scalar + sep
+                    
+            # if no prefix, return empty string
+            else:
+                scalar = ""
+            
+            return scalar
+        
+        # option 2. keep line number
+        if keep.strip().lower().startswith("line"):
+            scalar = parts[-1]
+        
+            return scalar
+            
+        # option 3. return list of parts
+        return parts
+        
+    def getLineNo(self, loc=None, sep=".", alpha=True):
+        return self.splitLocus(loc, sep=sep, keep="line", alpha=alpha)
+
+    def getPrefix(self, loc=None, sep=".", trailing=False):
+        return self.splitLocus(loc, sep=sep, keep="prefix", trailing=trailing)
+        
+    def isMultiPrefix(self, sep="."):
+        return self.getPrefix("first") != self.getPrefix("last")
+        
 
 class Tag(object):
     '''A speech type tag'''

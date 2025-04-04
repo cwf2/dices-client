@@ -25,7 +25,7 @@ setuptools.setup(
     python_requires=">=3.10",
     install_requires=[
         "requests",
-        "numpy==1.25.2",
+        "numpy==1.26.4",
         "pandas",
         "cltk",
         "spacy",

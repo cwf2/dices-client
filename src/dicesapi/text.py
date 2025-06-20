@@ -185,7 +185,7 @@ class Passage(object):
             
             # bail if string not found
             if char_pos == -1:
-                self._cltk_token_index.append(None)
+                self._spacy_token_index.append(None)
                 continue
         
             # otherwise, record position,

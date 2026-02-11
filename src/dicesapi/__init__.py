@@ -2032,7 +2032,7 @@ class Tag(object):
 class DicesAPI(object):
     '''a connection to the DICES API'''
     
-    DEFAULT_API = 'http://dices.ub.uni-rostock.de/api/'
+    DEFAULT_API = 'http://db.dices.mta.ca/api/'
     DEFAULT_CTS = 'https://scaife-cts.perseus.org/api/cts'
 
     LOG_HIGHDETAIL=3

@@ -1,4 +1,5 @@
 import dicesapi
+from . import logger
 
 
 class Metrics(object):
@@ -9,7 +10,7 @@ class Metrics(object):
         if api is None or not isinstance(api, dicesapi.DicesAPI):
             raise ValueError
         else:
-            api.logThis("Metrics object created", dicesapi.DicesAPI.LOG_LOWDETAIL)
+            logger.info("Metrics object created")
 
     #Cluster Functions
 
@@ -23,9 +24,9 @@ class Metrics(object):
         :return: the number of interruptions in the cluster.
         :doc-author: Trelent
         """
-        self.api.logThis("Counting Interruptions from a cluster", dicesapi.DicesAPI.LOG_MEDDETAIL)
+        logger.debug("Counting Interruptions from a cluster")
         if not isinstance(cluster, dicesapi.SpeechCluster):
-            self.api.logCritical("Could not count interruptions as a SpeechCluster was not provided", dicesapi.DicesAPI.LOG_LOWDETAIL)
+            logger.critical("Could not count interruptions as a SpeechCluster was not provided")
             return self.ERROR_VALUE
         speeches = self.api.getSpeeches(cluster_id=cluster.id)
         interruptions = 0
@@ -45,9 +46,9 @@ class Metrics(object):
         :return: the number of replies in a cluster.
         :doc-author: Trelent
         """
-        self.api.logThis("Counting Replies from a cluster", dicesapi.DicesAPI.LOG_MEDDETAIL)
+        logger.debug("Counting Replies from a cluster")
         if not isinstance(cluster, dicesapi.SpeechCluster):
-            self.api.logCritical("Could not count replies as a SpeechCluster was not provided", dicesapi.DicesAPI.LOG_LOWDETAIL)
+            logger.critical("Could not count replies as a SpeechCluster was not provided")
             return self.ERROR_VALUE
         speeches = self.api.getSpeeches(cluster_id=cluster.id)
         interruptions = 0
@@ -67,9 +68,9 @@ class Metrics(object):
         :return: the number of speakers in a cluster.
         :doc-author: Trelent
         """
-        self.api.logThis("Counting speakers in a cluster", dicesapi.DicesAPI.LOG_MEDDETAIL)
+        logger.debug("Counting speakers in a cluster")
         if not isinstance(cluster, dicesapi.SpeechCluster):
-            self.api.logCritical("Could not count speakers as a SpeechCluster was not provided", dicesapi.DicesAPI.LOG_LOWDETAIL)
+            logger.critical("Could not count speakers as a SpeechCluster was not provided")
             return self.ERROR_VALUE
         speeches = self.api.getSpeeches(cluster_id=cluster.id)
         speakers = 0
@@ -86,9 +87,9 @@ class Metrics(object):
         :return: a number that is the count of speeches in a cluster.
         :doc-author: Trelent
         """
-        self.api.logThis("Counting speakers in a cluster", dicesapi.DicesAPI.LOG_MEDDETAIL)
+        logger.debug("Counting speakers in a cluster")
         if not isinstance(cluster, dicesapi.SpeechCluster):
-            self.api.logCritical("Could not count replies as a SpeechCluster was not provided", dicesapi.DicesAPI.LOG_LOWDETAIL)
+            logger.critical("Could not count replies as a SpeechCluster was not provided")
             return self.ERROR_VALUE
         speeches = self.api.getSpeeches(cluster_id=cluster.id)
         addressees = 0
@@ -107,9 +108,9 @@ class Metrics(object):
         :return: a boolean value.
         :doc-author: Trelent
         """
-        self.api.logThis("Determining whether conversation is one sided", dicesapi.DicesAPI.LOG_MEDDETAIL)
+        logger.debug("Determining whether conversation is one sided")
         if not isinstance(cluster, dicesapi.SpeechCluster):
-            self.api.logCritical("Could not determine one sidedness as a SpeechCluster was not provided", dicesapi.DicesAPI.LOG_LOWDETAIL)
+            logger.critical("Could not determine one sidedness as a SpeechCluster was not provided")
             return self.ERROR_VALUE
         addressees = []
         speeches = self.api.getSpeeches(cluster_id=cluster.id)
@@ -129,13 +130,13 @@ class Metrics(object):
         :return: True if the conversation is a monologue.
         :doc-author: Trelent
         """
-        self.api.logThis("Determining whether conversation is a monologue", dicesapi.DicesAPI.LOG_MEDDETAIL)
+        logger.debug("Determining whether conversation is a monologue")
         if not isinstance(cluster, dicesapi.SpeechCluster):
-            self.api.logCritical("Could not determine if cluster is a monologue as a SpeechCluster was not provided", dicesapi.DicesAPI.LOG_LOWDETAIL)
+            logger.critical("Could not determine if cluster is a monologue as a SpeechCluster was not provided")
             return self.ERROR_VALUE
         speeches = self.api.getSpeeches(cluster_id=cluster.id)
         if(len(speeches) == 0):
-            self.api.logWarning("Cluster did not contain any speeches", dicesapi.DicesAPI.LOG_LOWDETAIL)
+            logger.warning("Cluster did not contain any speeches")
             return False
         if(len(speeches[0].spkr) != 1):
             return False
@@ -155,12 +156,12 @@ class Metrics(object):
         :return: True if the character object is a speaker and the cluster has an interruption, False otherwise.
         :doc-author: Trelent
         """
-        self.api.logThis("Checking if speaker interrupts")
+        logger.debug("Checking if speaker interrupts")
         if not isinstance(cluster, dicesapi.SpeechCluster):
-            self.api.logCritical("Could not check if speaker interrupts as a SpeechCluster was not provided", dicesapi.DicesAPI.LOG_LOWDETAIL)
+            logger.critical("Could not check if speaker interrupts as a SpeechCluster was not provided")
             return self.ERROR_VALUE
         if not isinstance(character, dicesapi.CharacterInstance):
-            self.api.logCritical("Could not check if speaker interrupts as a Character Instance was not provided", dicesapi.DicesAPI.LOG_LOWDETAIL)
+            logger.critical("Could not check if speaker interrupts as a Character Instance was not provided")
             return self.ERROR_VALUE
         speeches = self.api.getSpeeches(cluster_id=cluster.id)
         for speech in speeches:
@@ -182,12 +183,12 @@ class Metrics(object):
         :return: the number of times the speaker has spoken in the cluster.
         :doc-author: Trelent
         """
-        self.api.logThis("Checking speaker priority", dicesapi.DicesAPI.LOG_MEDDETAIL)
+        logger.debug("Checking speaker priority")
         if not isinstance(cluster, dicesapi.SpeechCluster):
-            self.api.logCritical("Could not get speaker priority as a SpeechCluster was not provided", dicesapi.DicesAPI.LOG_LOWDETAIL)
+            logger.critical("Could not get speaker priority as a SpeechCluster was not provided")
             return self.ERROR_VALUE
         if not isinstance(speaker, dicesapi.CharacterInstance):
-            self.api.logCritical("Could not get speaker priority as a Character Instance was not provided", dicesapi.DicesAPI.LOG_LOWDETAIL)
+            logger.critical("Could not get speaker priority as a Character Instance was not provided")
             return self.ERROR_VALUE
         speeches = self.api.getSpeeches(cluster_id=cluster.id)
         speaking = 0
@@ -207,8 +208,8 @@ class Metrics(object):
         :return: the balance of the speech, or -1 if there was an error.
         :doc-author: Trelent
         """
-        self.api.logThis("Determining speech balance", dicesapi.DicesAPI.LOG_MEDDETAIL)
+        logger.debug("Determining speech balance")
         if not isinstance(speech, dicesapi.Speech):
-            self.api.logCritical("Could not get speech balance as a Speech was not provided", dicesapi.DicesAPI.LOG_LOWDETAIL)
+            logger.critical("Could not get speech balance as a Speech was not provided")
             return self.ERROR_VALUE
         return len(speech.spkr)/len(speech.addr)

@@ -14,6 +14,8 @@ import requests
 from copy import deepcopy
 import re
 
+from . import logger
+
 DEFAULT_SERVERS = {None: 'https://scaife-cts.perseus.org/api/cts'}
 PUNCT = r'[ ,·.;\n—‘’“”]+'
 
@@ -218,7 +220,7 @@ class CtsAPI(object):
             cts_passage = resolver.getTextualNode(speech.work.urn, speech.l_range)
 
         except requests.exceptions.HTTPError as e:
-            speech.api.logWarning(f'Failed to download {speech.urn}: ' + str(e), speech.api.LOG_LOWDETAIL)
+            logger.warning(f'Failed to download {speech.urn}: ' + str(e))
             return None
 
         # cache

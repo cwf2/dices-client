@@ -25,10 +25,14 @@ setuptools.setup(
     python_requires=">=3.10",
     install_requires=[
         "requests",
-        "numpy==1.26.4",
+        "numpy",
         "pandas",
-        "cltk",
-        "spacy",
         "MyCapytain",
-    ]
+    ],
+    extras_require={
+        "spacy": ["spacy"],
+        "cltk": ["cltk"],
+        "nlp": ["dices-client[spacy,cltk]"],
+        "dev": ["pytest"],
+    },
 )

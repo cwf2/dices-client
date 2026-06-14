@@ -1,11 +1,21 @@
 import requests
 import pandas as pd
-import sys
 from MyCapytain.resolvers.cts.api import HttpCtsResolver
 from MyCapytain.retrievers.cts5 import HttpCtsRetriever
 import logging
 import csv
 import re
+
+# Module logger. Following standard library practice, this module does not
+# configure any handlers of its own -- by default, messages simply go
+# nowhere. Users who want to see DICES log messages should configure logging
+# themselves, e.g.:
+#
+#     import logging
+#     logging.basicConfig(level=logging.INFO)
+#
+logger = logging.getLogger('dicesapi')
+logger.addHandler(logging.NullHandler())
 
 
 class FilterParams(object):
@@ -2031,37 +2041,55 @@ class Tag(object):
              
 class DicesAPI(object):
     '''a connection to the DICES API'''
-    
+
     DEFAULT_API = 'http://db.dices.mta.ca/api/'
     DEFAULT_CTS = 'https://scaife-cts.perseus.org/api/cts'
 
+    # Legacy log "priority" levels, retained for backward compatibility.
+    # These are passed by callers as the second argument to logThis(); they
+    # control which standard logging level a message is emitted at, and
+    # (via `logdetail`, below) how verbose the logger is by default.
     LOG_HIGHDETAIL=3
     LOG_MEDDETAIL=2
     LOG_LOWDETAIL=1
     LOG_NODETAIL=0
 
+    # map legacy priorities onto standard logging levels
+    _PRIORITY_LEVELS = {
+        LOG_NODETAIL: logging.INFO,
+        LOG_LOWDETAIL: logging.INFO,
+        LOG_MEDDETAIL: logging.DEBUG,
+        LOG_HIGHDETAIL: logging.DEBUG,
+    }
 
-    def __init__(self, dices_api=DEFAULT_API, cts_api=DEFAULT_CTS, logfile=None, 
+    # map the legacy `logdetail` constructor argument onto a logging level
+    # for the shared `dicesapi` logger
+    _LOGDETAIL_LEVELS = {
+        LOG_NODETAIL: logging.WARNING,
+        LOG_LOWDETAIL: logging.INFO,
+        LOG_MEDDETAIL: logging.DEBUG,
+        LOG_HIGHDETAIL: logging.DEBUG,
+    }
+
+
+    def __init__(self, dices_api=DEFAULT_API, cts_api=DEFAULT_CTS, logfile=None,
                     logdetail=LOG_MEDDETAIL, progress_class=None):
-        """
-        The __init__ function is called when a class is instantiated. 
-        It initializes the attributes of the class, and it can take arguments that get passed to it by its parent class. 
-        In this case, we are using the __init__ function to initialize some attributes in our Dices object.
-        
-            self: Refer to the object instance (e
-            dices_api=DEFAULT_API: Set the default value of the dices api
-            cts_api=DEFAULT_CTS: Set the default cts api to use
-            logfile=None: Specify a logfile
-            logdetail=LOG_MEDDETAIL: Set the detail level of the log
-            progress_class=None: Pass a custom progress class to the dices object
-        :return: Nothing
-        :doc-author: Trelent
+        """Create a connection to the DICES API.
+
+        Args:
+            dices_api: Base URL of the DICES API.
+            cts_api: Base URL of the CTS API used to retrieve passage text.
+            logfile (str): If given, also write log messages to this file.
+            logdetail: How verbose the `dicesapi` logger should be by
+                default (one of the LOG_* constants).
+            progress_class: Optional progress-bar class used by
+                `getPagedJSON`.
         """
         self.API = dices_api
         self.CTS_API = cts_api
-        self.log = None
-        self.logdetail=logdetail
-        if(logfile is not None):
+        self.logdetail = logdetail
+        logger.setLevel(self._LOGDETAIL_LEVELS.get(logdetail, logging.DEBUG))
+        if logfile is not None:
             self.createLog(logfile)
         self.resolver = HttpCtsResolver(HttpCtsRetriever(self.CTS_API))
         self._ProgressClass = progress_class
@@ -2137,134 +2165,59 @@ class DicesAPI(object):
         return results
 
 
-    def createLog(self, logfile, clearLog=False):
-        """
-        The createLog function is used to create a new log file.
-        
-            self: Used to access the attributes and methods of the class in python.
-            logfile: Used to specify the name of the log file.
-            clearLog=False: Used to clear the log file.
-        :return: None.
-        :doc-author: Trelent
-        """
-        if not self.log or clearLog:
-            self.clearLog()
-            self.log = logging.getLogger("dicesLog")
-            self.log.setLevel(logging.DEBUG)
-            formatter = logging.Formatter(fmt='%(asctime)s - [%(levelname)s] %(message)s')
-            fh = logging.FileHandler(logfile)
-            fh.setLevel(logging.DEBUG)
-            fh.setFormatter(formatter)
-            sh = logging.StreamHandler()
-            sh.setLevel(logging.ERROR)
-            sh.setFormatter(formatter)
-            self.log.addHandler(fh)
-            self.log.addHandler(sh)     
-            self.logThis("New log created with " + self._detailtostring() + " Detail", self.LOG_NODETAIL)
-        else:
-            self.logWarning("A new log cannot be initialized when a log already exists", self.LOG_MEDDETAIL)
-        
-    
-    def _detailtostring(self):
-        """
-        The _detailtostring function is used to convert the logdetail attribute into a string.
-        The logdetail attribute is an integer that represents the level of detail in the logs. 
-        It can be set to one of four values: No, Low, Medium or High.  The _detailtostring function returns these values as strings instead of integers.
-        
-            self: Access the attributes and methods of the class in python
-        :return: The log detail level as a string
-        :doc-author: Trelent
-        """
-        if self.logdetail == self.LOG_NODETAIL:
-            return "No"
-        elif self.logdetail == self.LOG_LOWDETAIL:
-            return "Low"
-        elif self.logdetail == self.LOG_MEDDETAIL:
-            return "Medium"
-        else:
-            return "High"
+    def createLog(self, logfile):
+        """Add a file handler so log messages are also written to `logfile`.
 
-    
-    def clearLog(self):
+        Args:
+            logfile (str): Path to the log file.
         """
-        The clearLog function is used to clear the log file.
-        
-            self: Used to refer to the object itself.
-        :return: a None object.
-        :doc-author: Trelent
-        """
-        if self.log:
-            self.logWarning("Clearing log *LOG MAY END HERE*", self.LOG_NODETAIL)
-            self.log = None
+        formatter = logging.Formatter(fmt='%(asctime)s - [%(levelname)s] %(message)s')
+        fh = logging.FileHandler(logfile)
+        fh.setFormatter(formatter)
+        logger.addHandler(fh)
+        logger.debug("New log created at " + logfile)
 
 
-    def logThis(self, message, priority):
+    def logThis(self, message, priority=LOG_MEDDETAIL):
+        """Log an informational/debug message.
+
+        Args:
+            message (str): The message to log.
+            priority: One of the LOG_* constants. LOG_NODETAIL/LOG_LOWDETAIL
+                messages are logged at INFO; LOG_MEDDETAIL/LOG_HIGHDETAIL
+                messages are logged at DEBUG.
         """
-        The logThis function is used to log the messages in a file or print it on console.
-        
-            self: Used to access the class attributes.
-            message: Used to pass the message that needs to be logged.
-            priority: Used to determine if a message should be logged.
-        :return: the message that was passed into it.
-        :doc-author: Trelent
-        """
-        if priority <= self.logdetail:
-            if self.log:
-                self.log.debug(message)
-            else:
-                sys.stderr.write("[GENE]" + message)
+        logger.log(self._PRIORITY_LEVELS.get(priority, logging.DEBUG), message)
 
 
-        
-    def logWarning(self, message, priority):
-        """
-        The logWarning function prints a warning message to the screen and also writes it to the log file if one is specified.
-        
-            self: Used to access the class attributes.
-            message: Used to pass the message that needs to be logged.
-            priority: Used to determine if a message should be logged or not.
-        :return: None.
-        :doc-author: Trelent
-        """
-        if priority <= self.logdetail:
-            if self.log:
-                self.log.warning(message)
-            else:
-                sys.stderr.write("[WARNING]" + message)
+    def logWarning(self, message, priority=LOG_LOWDETAIL):
+        """Log a warning message.
 
-    
-    def logError(self, message, priority):
+        Args:
+            message (str): The message to log.
+            priority: Accepted for backward compatibility; has no effect.
         """
-        The logError function is used to log errors in the event that a user does not have logging enabled.
-        
-            self: Used to access the class variables.
-            message: Used to store the error message.
-            priority: Used to determine which messages are logged and which aren't.
-        :return: True.
-        :doc-author: Trelent
-        """
-        if priority <= self.logdetail:
-            if self.log:
-                self.log.error(message)
-            else:
-                sys.stderr.write("[ERROR]" + message)
+        logger.warning(message)
 
-    
-    def logCritical(self, message, priority):
+
+    def logError(self, message, priority=LOG_LOWDETAIL):
+        """Log an error message.
+
+        Args:
+            message (str): The message to log.
+            priority: Accepted for backward compatibility; has no effect.
         """
-        The logCritical function prints the message to the console and also writes it to a log file if logging is enabled.
-        
-            self: Used to access the class attributes.
-            message: Used to pass the message that needs to be logged.
-            priority: Used to determine the level of detail in the log.
-        :return: the log object.
-        :doc-author: Trelent
+        logger.error(message)
+
+
+    def logCritical(self, message, priority=LOG_LOWDETAIL):
+        """Log a critical message.
+
+        Args:
+            message (str): The message to log.
+            priority: Accepted for backward compatibility; has no effect.
         """
-        if priority <= self.logdetail:
-            if self.log:
-                self.log.critical(message)
-            else:
-                sys.stderr.write("[CRITICAL]" + message)
+        logger.critical(message)
 
         
     def getSpeeches(self, progress=False, **kwargs):

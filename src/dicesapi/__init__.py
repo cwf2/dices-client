@@ -18,6 +18,19 @@ logger = logging.getLogger('dicesapi')
 logger.addHandler(logging.NullHandler())
 
 
+def _assign_fields(obj, data, fields):
+    '''Copy each field present in `data` onto the same-named attribute of `obj`
+
+    Used by model classes' `_from_data` methods for simple scalar fields.
+    Fields that need special handling (e.g. nested objects) should be
+    excluded here and handled separately.
+    '''
+
+    for field in fields:
+        if field in data:
+            setattr(obj, field, data[field])
+
+
 class FilterParams(object):
 
     CHARACTER_GENDER_FEMALE="female"
@@ -56,8 +69,7 @@ class DataGroup(object):
         
         self._things=things
         if api is None:
-            print("Could not create a datagroup with no API, exiting")
-            quit()
+            raise ValueError("Could not create a datagroup with no API")
         self.api=api
     
 
@@ -261,7 +273,35 @@ class DataGroup(object):
         if len(newlist) == 0:
             logger.warning("Advanced filtering yielded no results")
         return type(self)(newlist, self.api)
-    
+
+    def filterBy(self, attr, values, incl_none=False):
+        """Return a new group containing items whose `attr` is in `values`
+
+        Args:
+            attr (str): Name of the attribute to filter on
+            values: Collection of allowed values for `attr`
+            incl_none (bool): Include items whose `attr` is None
+
+        Returns:
+            A new group of the same type
+        """
+
+        label = self.__class__.__name__[1:]
+        logger.debug(f"Filtering {label} along '{attr}'")
+        newlist = []
+        for thing in self._things:
+            val = getattr(thing, attr)
+            if (val is None and incl_none) or (val is not None and val in values):
+                newlist.append(thing)
+        if len(newlist) == 0:
+            logger.warning(f"Filtering {label} along '{attr}' returned no entries")
+        return type(self)(newlist, self.api)
+
+    def pluck(self, attr):
+        """Return a list of `attr` values, one for each item in the group"""
+
+        return [getattr(thing, attr) for thing in self._things]
+
     @property
     def __headers__(self):
         h = self.PREDEF_HEADERS
@@ -301,33 +341,25 @@ class AuthorGroup(DataGroup):
     '''Datagroup used to hold a list of Authors'''
     PREDEF_HEADERS = ["name"]
 
-    def __init__(self, things=None, api=None):
-        self._things = things
-        if api is None:
-            print("Could not create a datagroup with no API, exiting")
-            quit()
-        self.api = api
-    
-
     def getIDs(self):
         '''Returns a list of author IDs'''
-        return [x.id for x in self._things]
-    
+        return self.pluck('id')
+
 
     def getNames(self):
         '''Return a list of the authors names'''
-        return [x.name for x in self._things]
+        return self.pluck('name')
 
 
     def getWDs(self):
         '''Returns a list of the author WDs'''
-        return [x.wd for x in self._things]
-    
+        return self.pluck('wd')
+
 
     def getUrns(self):
         '''Returns a list of author URNs'''
-        return [x.urn for x in self._things]
-    
+        return self.pluck('urn')
+
 
     def filterNames(self, names, incl_none=False):
         '''Filter the authors by name
@@ -335,20 +367,13 @@ class AuthorGroup(DataGroup):
         Args:
             names (list): List of names to match
             incl_none (bool): Include None values in the list of names
-        
+
         Returns:
             A new AuthorGroup
         '''
-        
-        logger.debug("Filtering " + self.__class__.__name__[1:] + " along names")
-        newlist = []
-        for thing in self._things:
-            if((thing is not None or (thing is None and incl_none)) and thing.name in names):
-                newlist.append(thing)
-        if len(newlist) == 0:
-            logger.warning("Filtering " + self.__class__.__name__[1:] + " names returned no entries")
-        return AuthorGroup(newlist, api=self.api)
-    
+
+        return self.filterBy('name', names, incl_none)
+
 
     def filterIDs(self, ids, incl_none=False):
         """Filter the authors by ID
@@ -356,40 +381,26 @@ class AuthorGroup(DataGroup):
         Args:
             ids (list): Author IDs to match
             incl_none (bool): Include None values in the list of IDs
-        
+
         Returns:
             A new AuthorGroup
         """
 
-        logger.debug("Filtering " + self.__class__.__name__[1:] + " along IDs")
-        newlist = []
-        for thing in self._things:
-            if((thing is not None or (thing is None and incl_none)) and thing.id in ids):
-                newlist.append(thing)
-        if len(newlist) == 0:
-            logger.warning("Filtering " + self.__class__.__name__[1:] + " IDs returned no entries")
-        return AuthorGroup(newlist, self.api)
+        return self.filterBy('id', ids, incl_none)
 
 
     def filterWDs(self, wds, incl_none=False):
         """Filter the authors by WikiData ID
-        
+
         Args:
             wds (list): List of Wikidata IDs to match
             incl_none (bool): Include None values in the list
-        
+
         Returns:
             A new AuthorGroup
         """
 
-        logger.debug("Filtering " + self.__class__.__name__[1:] + " along WD's")
-        newlist = []
-        for thing in self._things:
-            if( (thing is not None or (thing is None and incl_none)) and thing.wd in wds ):
-                newlist.append(thing)
-        if len(newlist) == 0:
-            logger.warning("Filtering " + self.__class__.__name__[1:] + " WD's returned no entries")
-        return AuthorGroup(newlist, self.api)
+        return self.filterBy('wd', wds, incl_none)
 
 
     def filterUrns(self, urns, incl_none=False):
@@ -398,19 +409,12 @@ class AuthorGroup(DataGroup):
         Args:
             urns (list): List URNs to match
             incl_none (bool): Include None values in the list
-        
+
         Returns:
             A new AuthorGroup
         """
 
-        logger.debug("Filtering " + self.__class__.__name__[1:] + " along Urn's")
-        newlist = []
-        for thing in self._things:
-            if( (thing is not None or (thing is None and incl_none)) and thing.urn in urns ):
-                newlist.append(thing)
-        if len(newlist) == 0:
-            logger.warning("Filtering " + self.__class__.__name__[1:] + " Urn's returned no entries")
-        return AuthorGroup(newlist, self.api)
+        return self.filterBy('urn', urns, incl_none)
 
 
 class Author(object):
@@ -444,56 +448,41 @@ class Author(object):
 
     def _from_data(self, data):
         '''populate attributes from data dict'''
-        
-        if 'id' in data:
-            self.id = data['id']
-        if 'name' in data:
-            self.name = data['name']
-        if 'wd' in data:
-            self.wd = data['wd']
-        if 'urn' in data:
-            self.urn = data['urn']
+
+        _assign_fields(self, data, ['id', 'name', 'wd', 'urn'])
 
 
 class WorkGroup(DataGroup):
     '''Datagroup used to hold a list of works'''
 
-    def __init__(self, things=None, api=None):
-        self._things = things 
-        if api is None:
-            print("Could not create a datagroup with no API, exiting")
-            quit()
-        self.api=api  
-
-
     def getIDs(self):
         '''Returns a list of work IDs'''
-        return [x.id for x in self._things]
-    
+        return self.pluck('id')
+
 
     def getTitles(self):
         '''Returns a list of work titles'''
-        return [x.title for x in self._things]
-    
+        return self.pluck('title')
+
 
     def getWDs(self):
         '''Returns a list of work WDs'''
-        return [x.wd for x in self._things]
+        return self.pluck('wd')
 
 
     def getURNs(self):
         '''Returns a list of work URNs'''
-        return [x.urn for x in self._things]
-    
+        return self.pluck('urn')
+
 
     def getLangs(self):
         '''Returns a list of work languages'''
-        return [x.lang for x in self._things]
+        return self.pluck('lang')
 
 
     def getAuthors(self, flatten=False):
         '''Returns a list of Authors'''
-        auths = [x.author for x in self._things]
+        auths = self.pluck('author')
         if flatten:
             auths = AuthorGroup(list(set(auths)), api=self.api)
         return auths
@@ -505,19 +494,12 @@ class WorkGroup(DataGroup):
         Args:
             ids (list): List of work IDs to match
             incl_none (bool): Include None values in the list
-        
+
         Returns:
             A new WorkGroup
         """
 
-        logger.debug("Filtering " + self.__class__.__name__[1:] + " along ID's")
-        newlist = []
-        for thing in self._things:
-            if( (thing is not None or (thing is None and incl_none)) and thing.id in ids ):
-                newlist.append(thing)
-        if len(newlist) == 0:
-            logger.warning("Filtering " + self.__class__.__name__[1:] + " ID's returned no entries")
-        return WorkGroup(newlist, self.api)
+        return self.filterBy('id', ids, incl_none)
 
 
     def filterTitles(self, titles, incl_none=False):
@@ -526,19 +508,12 @@ class WorkGroup(DataGroup):
         Args:
             titles (list): List of titles to match
             incl_none (bool): Include None values in the list.
-        
+
         Returns:
             A new WorkGroup
         """
 
-        logger.debug("Filtering " + self.__class__.__name__[1:] + " along Title's")
-        newlist = []
-        for thing in self._things:
-            if( (thing is not None or (thing is None and incl_none)) and thing.title in titles ):
-                newlist.append(thing)
-        if len(newlist) == 0:
-            logger.warning("Filtering " + self.__class__.__name__[1:] + " Title's returned no entries")
-        return WorkGroup(newlist, self.api)
+        return self.filterBy('title', titles, incl_none)
 
 
     def filterWDs(self, wds, incl_none=False):
@@ -552,14 +527,7 @@ class WorkGroup(DataGroup):
             A new WorkGroup
         """
 
-        logger.debug("Filtering " + self.__class__.__name__[1:] + " along WD's")
-        newlist = []
-        for thing in self._things:
-            if( (thing is not None or (thing is None and incl_none)) and thing.wd in wds ):
-                newlist.append(thing)
-        if len(newlist) == 0:
-            logger.warning("Filtering " + self.__class__.__name__[1:] + " WD's returned no entries")
-        return WorkGroup(newlist, self.api)
+        return self.filterBy('wd', wds, incl_none)
 
 
     def filterUrns(self, urns, incl_none=False):
@@ -568,42 +536,28 @@ class WorkGroup(DataGroup):
         Args:
             urns (list): List of URNs to match
             incl_none (bool): Include None values in the list of works.
-        
+
         Returns:
             A new WorkGroup
         """
 
-        logger.debug("Filtering " + self.__class__.__name__[1:] + " along Urn's")
-        newlist = []
-        for thing in self._things:
-            if( (thing is not None or (thing is None and incl_none)) and thing.urn in urns ):
-                newlist.append(thing)
-        if len(newlist) == 0:
-            logger.warning("Filtering " + self.__class__.__name__[1:] + " Urn's returned no entries")
-        return WorkGroup(newlist, self.api)
+        return self.filterBy('urn', urns, incl_none)
 
 
     def filterAuthors(self, authors, incl_none=False):
         """Filter the works by author
-        
+
         Args:
             authors (list): List of Author objects to match
             incl_none (bool): Include None values in the list
-        
+
         Returns:
             A new WorkGroup
         """
 
-        logger.debug("Filtering " + self.__class__.__name__[1:] + " along Author's")
-        newlist = []
-        for thing in self._things:
-            if( (thing is not None or (thing is None and incl_none)) and thing.author in authors ):
-                newlist.append(thing)
-        if len(newlist) == 0:
-            logger.warning("Filtering " + self.__class__.__name__[1:] + " Author's returned no entries")
-        return WorkGroup(newlist, self.api)
-        
-        
+        return self.filterBy('author', authors, incl_none)
+
+
     def filterLangs(self, langs, incl_none=False):
         """Filter the works by language
 
@@ -615,14 +569,7 @@ class WorkGroup(DataGroup):
             A new WorkGroup
         """
 
-        logger.debug("Filtering " + self.__class__.__name__[1:] + " along Lang's")
-        newlist = []
-        for thing in self._things:
-            if( (thing is not None or (thing is None and incl_none)) and thing.lang in langs ):
-                newlist.append(thing)
-        if len(newlist) == 0:
-            logger.warning("Filtering " + self.__class__.__name__[1:] + " Lang's returned no entries")
-        return WorkGroup(newlist, self.api)
+        return self.filterBy('lang', langs, incl_none)
 
 
 class Work(object):
@@ -660,17 +607,9 @@ class Work(object):
 
     def _from_data(self, data):
         '''populate attributes from data dict'''
-        
-        if 'id' in data:
-            self.id = data['id']
-        if 'title' in data:
-            self.title = data['title']
-        if 'wd' in data:
-            self.wd = data['wd']
-        if 'urn' in data:
-            self.urn = data['urn']
-        if 'lang' in data:
-            self.lang = data['lang']
+
+        _assign_fields(self, data, ['id', 'title', 'wd', 'urn', 'lang'])
+
         if 'author' in data:
             if self.index:
                 self.author = self.api.indexedAuthor(data['author'])
@@ -683,47 +622,40 @@ class CharacterGroup(DataGroup):
     '''Datagroup used to hold a list of Characters'''
     
     PREDEF_HEADERS = ["name"]
-    def __init__(self, things=None, api=None):
-        self._things = things
-        if api is None:
-            print("Could not create a datagroup with no API, exiting")
-            quit()
-        self.api=api
-    
 
     def getIDs(self):
         '''Returns a list of character IDs'''
-        return [x.id for x in self._things]
-    
+        return self.pluck('id')
+
 
     def getNames(self):
         '''Returns a list of character names'''
-        return [x.name for x in self._things]
-    
+        return self.pluck('name')
+
 
     def getBeings(self):
         '''Returns a list of character beings'''
-        return [x.being for x in self._things]
-    
+        return self.pluck('being')
+
 
     def getNumbers(self):
         '''Returns a list of character numbers'''
-        return [x.number for x in self._things]
-    
+        return self.pluck('number')
+
 
     def getWDs(self):
         '''Returns a list of character WikiData IDs'''
-        return [x.wd for x in self._things]
+        return self.pluck('wd')
 
 
     def getMantos(self):
         '''Returns a list of character MANTO IDs'''
-        return [x.manto for x in self._things]
-    
+        return self.pluck('manto')
+
 
     def getGenders(self):
         '''Returns a list of character genders'''
-        return [x.gender for x in self._things]
+        return self.pluck('gender')
 
 
     def filterIDs(self, ids, incl_none=False):
@@ -732,19 +664,12 @@ class CharacterGroup(DataGroup):
         Args:
             ids (list): list of IDs to match
             incl_none (bool): Include None values in the list.
-        
+
         Returns:
             A new CharacterGroup
         """
 
-        logger.debug("Filtering " + self.__class__.__name__[1:] + " along ID's")
-        newlist = []
-        for thing in self._things:
-            if( (thing is not None or (thing is None and incl_none)) and thing.id is not None and thing.id in ids ):
-                newlist.append(thing)
-        if len(newlist) == 0:
-            logger.warning("Filtering " + self.__class__.__name__[1:] + " ID's returned no entries")
-        return CharacterGroup(newlist, self.api)
+        return self.filterBy('id', ids, incl_none)
 
 
     def filterNames(self, names, incl_none=False):
@@ -753,124 +678,82 @@ class CharacterGroup(DataGroup):
         Args:
             names (list): List of names to match
             incl_none (bool): Include None values in the list.
-        
+
         Returns:
             A new CharacterGroup
         """
 
-        logger.debug("Filtering " + self.__class__.__name__[1:] + " along Name's")
-        newlist = []
-        for thing in self._things:
-            if( (thing is not None or (thing is None and incl_none)) and thing.name is not None and thing.name in names ):
-                newlist.append(thing)
-        if len(newlist) == 0:
-            logger.warning("Filtering " + self.__class__.__name__[1:] + " Name's returned no entries")
-        return CharacterGroup(newlist, self.api)
+        return self.filterBy('name', names, incl_none)
 
 
     def filterBeings(self, beings, incl_none=False):
         """Filter characters by `being` attribute
-        
+
         Args:
             beings (list): list of allowed `being` values
             incl_none (bool): Include None values in the list
-        
+
         Returns:
             A new CharacterGroup
         """
-        
-        logger.debug("Filtering " + self.__class__.__name__[1:] + " along Being's")
-        newlist = []
-        for thing in self._things:
-            if( (thing is not None or (thing is None and incl_none)) and thing.being is not None and thing.being in beings ):
-                newlist.append(thing)
-        if len(newlist) == 0:
-            logger.warning("Filtering " + self.__class__.__name__[1:] + " Being's returned no entries")
-        return CharacterGroup(newlist, self.api)
+
+        return self.filterBy('being', beings, incl_none)
 
 
     def filterNumbers(self, numbers, incl_none=False):
         """Filter characters by `number` attribute
-        
+
         Args:
             numbers (list): List of allowed `number` values
             incl_none (bool): Include None values in the list
-        
+
         Returns:
             A new CharacterGroup
         """
-        
-        logger.debug("Filtering " + self.__class__.__name__[1:] + " along Number's")
-        newlist = []
-        for thing in self._things:
-            if( (thing is not None or (thing is None and incl_none)) and thing.number is not None and thing.number in numbers ):
-                newlist.append(thing)
-        if len(newlist) == 0:
-            logger.warning("Filtering " + self.__class__.__name__[1:] + " Number's returned no entries")
-        return CharacterGroup(newlist, self.api)
+
+        return self.filterBy('number', numbers, incl_none)
 
 
     def filterWDs(self, wds, incl_none=False):
         """Filter characters by `wd` attribute (WikiData ID)
-        
+
         Args:
             wds (list): List of allowed WikiData IDs
             incl_none (bool): Include None values in the list
-        
+
         Returns:
             A new CharacterGroup
         """
 
-        logger.debug("Filtering " + self.__class__.__name__[1:] + " along WD's")
-        newlist = []
-        for thing in self._things:
-            if( (thing is not None or (thing is None and incl_none)) and thing.wd is not None and thing.wd in wds ):
-                newlist.append(thing)
-        if len(newlist) == 0:
-            logger.warning("Filtering " + self.__class__.__name__[1:] + " WD's returned no entries")
-        return CharacterGroup(newlist, self.api)
+        return self.filterBy('wd', wds, incl_none)
 
 
     def filterMantos(self, mantos, incl_none=False):
         """Filter characters by `manto` attribute (MANTO ID)
-        
+
         Args:
             mantos (list): List of allowed MANTO IDs
             incl_none (bool): Include None values in the list
-        
+
         Returns:
             A new CharacterGroup
         """
 
-        logger.debug("Filtering " + self.__class__.__name__[1:] + " along Manto's")
-        newlist = []
-        for thing in self._things:
-            if( (thing is not None or (thing is None and incl_none)) and thing.manto is not None and thing.manto in mantos ):
-                newlist.append(thing)
-        if len(newlist) == 0:
-            logger.warning("Filtering " + self.__class__.__name__[1:] + " Manto's returned no entries")
-        return CharacterGroup(newlist, self.api)
+        return self.filterBy('manto', mantos, incl_none)
 
 
     def filterGenders(self, genders, incl_none=False):
         """Filter characters by `gender` attribute
-        
+
         Args:
             genders (list): List of allowed `gender` values
             incl_none (bool): Include None values in the list
-        
+
         Returns:
             A new CharacterGroup
         """
 
-        logger.debug("Filtering " + self.__class__.__name__[1:] + " along Gender's")
-        newlist = []
-        for thing in self._things:
-            if( (thing is not None or (thing is None and incl_none)) and thing.gender is not None and thing.gender in genders ):
-                newlist.append(thing)
-        if len(newlist) == 0:
-            logger.warning("Filtering " + self.__class__.__name__[1:] + " Gender's returned no entries")
-        return CharacterGroup(newlist, self.api)
+        return self.filterBy('gender', genders, incl_none)
 
 
 class Character(object):
@@ -909,84 +792,62 @@ class Character(object):
 
     def _from_data(self, data):
         '''populate attributes from data'''
-        
-        if 'id' in data:
-            self.id = data['id']
-        if 'name' in data:
-            self.name = data['name']
-        if 'being' in data:
-            self.being = data['being']
-        if 'number' in data:
-            self.number = data['number']
-        if 'gender' in data:
-            self.gender = data['gender']
-        if 'wd' in data:
-            self.wd = data['wd']
-        if 'manto' in data:
-            self.manto = data['manto']
-        if 'tt' in data:
-            self.tt = data['tt']
+
+        _assign_fields(self, data, ['id', 'name', 'being', 'number', 'gender', 'wd', 'manto', 'tt'])
 
 
 class CharacterInstanceGroup(DataGroup):
     '''Datagroup used to hold a list of Character Instances'''
 
     PREDEF_HEADERS = ["name"]
-    def __init__(self, things=None, api=None):
-        self._things = things
-        if api is None:
-            print("Could not create a datagroup with no API, exiting")
-            quit()
-        self.api=api
-    
 
     def getIDs(self):
         '''Returns a list of character instance ID's'''
-        return [x.id for x in self._things]
-    
+        return self.pluck('id')
+
 
     def getContexts(self):
         '''Returns a list of character instance context's'''
-        return [x.context for x in self._things]
-    
+        return self.pluck('context')
+
 
     def getChars(self, flatten=False):
         '''Returns a list of character instance Character's'''
-        chars = [x.char for x in self._things]
+        chars = self.pluck('char')
         if flatten:
-            chars = CharacterGroup(chars, api=self.api)
+            chars = CharacterGroup(list(set(chars)), api=self.api)
         return chars
-    
+
 
     def getDisgs(self):
         '''Returns a list of character instance Disg's'''
-        return [x.disg for x in self._things]
-        
+        return self.pluck('disg')
+
 
     def getAnons(self):
         '''Returns a list of character instance Anon's'''
-        return [x.anon for x in self._things]
-    
+        return self.pluck('anon')
+
 
     def getNames(self):
         '''Returns a list of character instance Name's'''
-        return [x.name for x in self._things]
+        return self.pluck('name')
 
 
     def getBeings(self):
         '''Returns a list of character instance Being's'''
-        return [x.being for x in self._things]
+        return self.pluck('being')
 
 
     def getNumbers(self):
         '''Returns a list of character instance Name's'''
-        return [x.number for x in self._things]
-    
+        return self.pluck('number')
+
 
     def getGenders(self):
         '''Returns a list of character instance Gender's'''
-        return [x.gender for x in self._things]
-    
+        return self.pluck('gender')
+
 
     def filterIDs(self, ids, incl_none=False):
         """Filter character instances by `id` attribute
@@ -994,20 +855,13 @@ class CharacterInstanceGroup(DataGroup):
         Args:
             ids (list): List of allowed `id` values
             incl_none (bool): Include None values in the results
-        
+
         Returns:
             A new CharacterInstanceGroup
         """
 
-        logger.debug("Filtering " + self.__class__.__name__[1:] + " along ID's")
-        newlist = []
-        for thing in self._things:
-            if( (thing is not None or (thing is None and incl_none)) and thing.id is not None and thing.id in ids ):
-                newlist.append(thing)
-        if len(newlist) == 0:
-            logger.warning("Filtering " + self.__class__.__name__[1:] + " ID's returned no entries")
-        return CharacterInstanceGroup(newlist, self.api)
-    
+        return self.filterBy('id', ids, incl_none)
+
 
     def filterContexts(self, contexts, incl_none=False):
         """Filter character instances by `context` attribute
@@ -1015,19 +869,12 @@ class CharacterInstanceGroup(DataGroup):
         Args:
             contexts (list): List of allowed `context` values
             incl_none (bool): Include None values in the results
-        
+
         Returns:
             A new CharacterInstanceGroup
         """
 
-        logger.debug("Filtering " + self.__class__.__name__[1:] + " along Context's")
-        newlist = []
-        for thing in self._things:
-            if( (thing is not None or (thing is None and incl_none)) and thing.context is not None and thing.context in contexts ):
-                newlist.append(thing)
-        if len(newlist) == 0:
-            logger.warning("Filtering " + self.__class__.__name__[1:] + " Context's returned no entries")
-        return CharacterInstanceGroup(newlist ,self.api)
+        return self.filterBy('context', contexts, incl_none)
 
 
     def filterChars(self, chars, incl_none=False):
@@ -1036,19 +883,12 @@ class CharacterInstanceGroup(DataGroup):
         Args:
             chars (list): List of allowed Character objects
             incl_none (bool): Include None values in the results
-        
+
         Returns:
             A new CharacterInstanceGroup
         """
 
-        logger.debug("Filtering " + self.__class__.__name__[1:] + " along Char's")
-        newlist = []
-        for thing in self._things:
-            if( (thing is not None or (thing is None and incl_none)) and thing.char is not None and thing.char in chars ):
-                newlist.append(thing)
-        if len(newlist) == 0:
-            logger.warning("Filtering " + self.__class__.__name__[1:] + " Char's returned no entries")
-        return CharacterInstanceGroup(newlist, self.api)
+        return self.filterBy('char', chars, incl_none)
 
 
     def filterNames(self, names, incl_none=False):
@@ -1057,19 +897,12 @@ class CharacterInstanceGroup(DataGroup):
         Args:
             names (list): List of allowed `name` values
             incl_none (bool): Include None values in the results
-        
+
         Returns:
             A new CharacterInstanceGroup
         """
 
-        logger.debug("Filtering " + self.__class__.__name__[1:] + " along Name's")
-        newlist = []
-        for thing in self._things:
-            if( (thing is not None or (thing is None and incl_none)) and thing.name is not None and thing.name in names ):
-                newlist.append(thing)
-        if len(newlist) == 0:
-            logger.warning("Filtering " + self.__class__.__name__[1:] + " Name's returned no entries")
-        return CharacterInstanceGroup(newlist, self.api)
+        return self.filterBy('name', names, incl_none)
 
 
     def filterBeings(self, beings, incl_none=False):
@@ -1078,19 +911,12 @@ class CharacterInstanceGroup(DataGroup):
         Args:
             beings (list): List of allowed `being` values
             incl_none (bool): Include None values in the results
-        
+
         Returns:
             A new CharacterInstanceGroup
         """
 
-        logger.debug("Filtering " + self.__class__.__name__[1:] + " along Being's")
-        newlist = []
-        for thing in self._things:
-            if( (thing is not None or (thing is None and incl_none)) and thing.being is not None and thing.being in beings ):
-                newlist.append(thing)
-        if len(newlist) == 0:
-            logger.warning("Filtering " + self.__class__.__name__[1:] + " Being's returned no entries")
-        return CharacterInstanceGroup(newlist, self.api)
+        return self.filterBy('being', beings, incl_none)
 
 
     def filterNumbers(self, numbers, incl_none=False):
@@ -1099,19 +925,12 @@ class CharacterInstanceGroup(DataGroup):
         Args:
             numbers (list): List of allowed `number` values
             incl_none (bool): Include None values in the results
-        
+
         Returns:
             A new CharacterInstanceGroup
         """
 
-        logger.debug("Filtering " + self.__class__.__name__[1:] + " along Number's")
-        newlist = []
-        for thing in self._things:
-            if( (thing is not None or (thing is None and incl_none)) and thing.number is not None and thing.number in numbers):
-                newlist.append(thing)
-        if len(newlist) == 0:
-            logger.warning("Filtering " + self.__class__.__name__[1:] + " Number's returned no entries")
-        return CharacterInstanceGroup(newlist, self.api)
+        return self.filterBy('number', numbers, incl_none)
 
 
     def filterGenders(self, genders, incl_none=False):
@@ -1120,19 +939,12 @@ class CharacterInstanceGroup(DataGroup):
         Args:
             genders (list): List of allowed `gender` values
             incl_none (bool): Include None values in the results
-        
+
         Returns:
             A new CharacterInstanceGroup
         """
 
-        logger.debug("Filtering " + self.__class__.__name__[1:] + " along Gender's")
-        newlist = []
-        for thing in self._things:
-            if( (thing is not None or (thing is None and incl_none)) and thing.gender is not None and thing.gender in genders ):
-                newlist.append(thing)
-        if len(newlist) == 0:
-            logger.warning("Filtering " + self.__class__.__name__[1:] + " Gender's returned no entries")
-        return CharacterInstanceGroup(newlist, self.api)
+        return self.filterBy('gender', genders, incl_none)
 
 
 class CharacterInstance(object):
@@ -1148,6 +960,7 @@ class CharacterInstance(object):
         self.disg = None
         self.number = None
         self.being = None
+        self.gender = None
         self.anon = None
         self._attributes = data
 
@@ -1175,11 +988,9 @@ class CharacterInstance(object):
 
     def _from_data(self, data):
         '''populate attributes from data'''
-        
-        if 'id' in data:
-            self.id = data['id']
-        if 'context' in data:
-            self.context = data['context']
+
+        _assign_fields(self, data, ['id', 'context', 'anon', 'name', 'being', 'number', 'gender'])
+
         if 'char' in data and data['char'] is not None:
             if self.index:
                 self.char = self.api.indexedCharacter(data['char'])
@@ -1189,16 +1000,6 @@ class CharacterInstance(object):
         if 'disguise' in data:
             # FIXME
             self.disg = data['disguise']
-        if 'anon' in data:
-            self.anon = data['anon']
-        if 'name' in data and data['name'] is not None:
-            self.name = data['name']
-        if 'being' in data and data['being'] is not None:
-            self.being = data['being']
-        if 'number' in data and data['number'] is not None:
-            self.number = data['number']
-        if 'gender' in data and data['gender'] is not None:
-            self.gender = data['gender']
 
     @property
     def wd(self):
@@ -1222,38 +1023,23 @@ class CharacterInstance(object):
 class SpeechClusterGroup(DataGroup):
     '''Datagroup used to hold a list of Speech Cluster's'''
 
-    def __init__(self, things=None, api=None):
-        self._things = things
-        if api is None:
-            print("Could not create a datagroup with no API, exiting")
-            quit()
-        self.api=api
-
-    
     def getIDs(self):
         '''Returns a list of Speech Cluster ID's'''
-        return [x.id for x in self._things]
+        return self.pluck('id')
 
-    
+
     def filterIDs(self, ids, incl_none=False):
         """Filter speech clusters by ID
 
         Args:
             ids: List of allowed IDs
             incl_none (bool): Include None values in the results
-        
+
         Returns:
             A new SpeechClusterGroup
         """
 
-        logger.debug("Filtering " + self.__class__.__name__[1:] + " along ID's")
-        newlist = []
-        for thing in self._things:
-            if( (thing is not None or (thing is None and incl_none)) and thing.id in ids ):
-                newlist.append(thing)
-        if len(newlist) == 0:
-            logger.warning("Filtering " + self.__class__.__name__[1:] + " ID's returned no entries")
-        return SpeechClusterGroup(newlist, self.api)
+        return self.filterBy('id', ids, incl_none)
 
 
 class SpeechCluster(object):
@@ -1288,11 +1074,9 @@ class SpeechCluster(object):
 
     def _from_data(self, data):
         '''populate attributes from data'''
-        
-        if 'id' in data:
-            self.id = data['id']
-        if 'type' in data:
-            self.type = data['type']
+
+        _assign_fields(self, data, ['id', 'type'])
+
         if 'speeches' in data:
             if isinstance(data['speeches'], list):
                 if self.index:
@@ -1359,42 +1143,35 @@ class SpeechCluster(object):
 class SpeechGroup(DataGroup):
     '''Datagroup used to hold a list of Speeches'''
 
-    def __init__(self, things=None, api=None):
-        self._things = things
-        if api is None:
-            print("Could not create a datagroup with no API, exiting")
-            quit()
-        self.api=api
-
-    
     def getIDs(self):
         '''Returns a list of Speech IDs'''
-        return [x.id for x in self._things]
-    
+        return self.pluck('id')
+
 
     def getClusters(self, flatten=False):
         '''Returns a list of Speech Clusters'''
-        clusters = [x.cluster for x in self._things]
-        
+        clusters = self.pluck('cluster')
+
         if flatten:
             clusters = SpeechClusterGroup(list(set(clusters)), api=self.api)
         return clusters
-    
+
 
     def getSeqs(self):
         '''Returns a list of Speech Seqs'''
-        return [x.seq for x in self._things]
-    
+        return self.pluck('seq')
+
 
     def getL_fis(self):
         '''Returns a list of Speech First Lines'''
-        return [x.l_fi for x in self._things]
-    
+        return self.pluck('l_fi')
+
 
     def getL_las(self):
         '''Returns a list of Speech Last Lines'''
-        return [x.l_la for x in self._things]
-    
+        return self.pluck('l_la')
+
+
 
     def getSpkrs(self, flatten=False):
         '''Returns speakers of member speeches
@@ -1442,277 +1219,114 @@ class SpeechGroup(DataGroup):
 
     def getParts(self):
         '''Returns the `part` attrs of member speeches as a list'''
-        return [x.part for x in self._things]
+        return self.pluck('part')
 
 
     def getTypes(self):
         '''Returns the `type` attrs of member speeches as a list'''
-        return [x.type for x in self._things]
+        return self.pluck('type')
 
 
     def getWorks(self, flatten=False):
         '''Returns the works of '''
-        
-        works = [x.work for x in self._things]
+
+        works = self.pluck('work')
         if flatten:
             works = WorkGroup(list(set(works)), api=self.api)
-        
+
         return works
 
 
     def filterIDs(self, ids, incl_none=False):
-        """
-        The filterIDs function is used to filter the list of things that are currently in the Speech class.
-        
-            self: Used to access the class attributes and methods.
-            ids: Used to filter the list of speeches by their ID.
-            incl_none=False: Used to include or exclude objects with None as their ID.
-        :return: a list of the speeches that have an ID in the ids parameter.
-        :doc-author: Trelent
-        """
         '''Filter on the Speech ID's'''
-        logger.debug("Filtering " + self.__class__.__name__[1:] + " along ID's")
-        newlist = []
-        for thing in self._things:
-            if(thing.id in ids ):
-                newlist.append(thing)
-        if len(newlist) == 0:
-            logger.warning("Filtering " + self.__class__.__name__[1:] + " ID's returned no entries")
-        return SpeechGroup(newlist, self.api)
+
+        return self.filterBy('id', ids, incl_none)
 
 
     def filterClusters(self, clusters, incl_none=False):
-        """
-        The filterClusters function specifically filters the list of things along the clusters that are passed in.
-        
-            self: Used to reference the class instance.
-            clusters: Used to filter the list of things.
-            incl_none=False: Used to include None's in the list.
-        :return: a list of the things that are in any of the clusters listed as parameters.
-        :doc-author: Trelent
-        """
         '''Filter on the Speech Cluster's'''
-        logger.debug("Filtering " + self.__class__.__name__[1:] + " along Cluster's")
-        newlist = []
-        for thing in self._things:
-            if( (thing is not None or (thing is None and incl_none)) and thing.cluster in clusters ):
-                newlist.append(thing)
-        if len(newlist) == 0:
-            logger.warning("Filtering " + self.__class__.__name__[1:] + " Cluster's returned no entries")
-        return SpeechGroup(newlist, self.api)
+
+        return self.filterBy('cluster', clusters, incl_none)
 
 
     def filterSeqs(self, seqs, incl_none=False):
-        """
-        The filterSeqs function is used to filter the list of things that are being processed by the
-        Speech API.
-        
-            self: Used to reference the object itself.
-            seqs: Used to filter the list of things.
-            incl_none=False: Used to include None values in the list of things.
-        :return: a list of things that are in seqs.
-        :doc-author: Trelent
-        """
         '''Filter on the Speech Seq's'''
-        logger.debug("Filtering " + self.__class__.__name__[1:] + " along Seq's")
-        newlist = []
-        for thing in self._things:
-            if( (thing is not None or (thing is None and incl_none)) and thing.seq in seqs ):
-                newlist.append(thing)
-        if len(newlist) == 0:
-            logger.warning("Filtering " + self.__class__.__name__[1:] + " Seq's returned no entries")
-        return SpeechGroup(newlist, self.api)
+
+        return self.filterBy('seq', seqs, incl_none)
 
 
     def filterL_fis(self, l_fis, incl_none=False):
-        """
-        The filterL_FIs function specifically filters the list of things along the L_FI's.
-        
-            self: Used to access the class attributes and methods.
-            l_fis: Used to filter the list of things along the L_FI's.
-            incl_none=False: Used to include None values in the list.
-        :return: the filtered list of things that have a l_fi in the l_fis list.
-        :doc-author: Trelent
-        """
         '''Filter on the Speech First Line's'''
-        logger.debug("Filtering " + self.__class__.__name__[1:] + " along L_FI's")
-        newlist = []
-        for thing in self._things:
-            if( (thing is not None or (thing is None and incl_none)) and thing.l_fi in l_fis ):
-                newlist.append(thing)
-        if len(newlist) == 0:
-            logger.warning("Filtering " + self.__class__.__name__[1:] + " L_FI's returned no entries")
-        return SpeechGroup(newlist, self.api)
+
+        return self.filterBy('l_fi', l_fis, incl_none)
 
 
     def filterL_ls(self, l_las, incl_none=False):
-        """
-        The filterL_LAs function specifically filters the list of things along the L_LA's.
-        
-            self: Used to access the API.
-            l_las: Used to filter the list of things by their L_LA.
-            incl_none=False: Used to include None values in the list of L_LAs.
-        :return: a list of the things that are included in l_las.
-        :doc-author: Trelent
-        """
         '''Filter on the Speech Last Line's'''
-        logger.debug("Filtering " + self.__class__.__name__[1:] + " along L_LA's")
-        newlist = []
-        for thing in self._things:
-            if( (thing is not None or (thing is None and incl_none)) and thing.l_la in l_las ):
-                newlist.append(thing)
-        if len(newlist) == 0:
-            logger.warning("Filtering " + self.__class__.__name__[1:] + " L_LA's returned no entries")
-        return SpeechGroup(newlist, self.api)
+
+        return self.filterBy('l_la', l_las, incl_none)
 
 
     def filterSpkrInstances(self, spkrs, incl_none=False):
-        """
-        The filterSpkrInstances function specifically filters the list of things in the class by speaker instances.
-        
-            self: Used to access the API class.
-            spkrs: Used to specify the speakers to include in the filtered list.
-            incl_none=False: Used to include None values in the list.
-        :return: a new list of objects that contain the specified speaker instances.
-        :doc-author: Trelent
-        """
-        '''Filter on the Speech Character Instance's'''
-        logger.debug("Filtering " + self.__class__.__name__[1:] + " along Speaker Instance's")
-        newlist = []
-        for thing in self._things:
-            if( (thing is not None or (thing is None and incl_none)) and any(c in spkrs for c in thing.spkr) ):
-                newlist.append(thing)
+        '''Filter to speeches with one of `spkrs` among their speaker instances'''
+
+        label = self.__class__.__name__[1:]
+        logger.debug(f"Filtering {label} along Speaker Instance's")
+        newlist = [thing for thing in self._things if any(c in spkrs for c in thing.spkr)]
         if len(newlist) == 0:
-            logger.warning("Filtering " + self.__class__.__name__[1:] + " Speaker Instance's returned no entries")
-        return SpeechGroup(newlist ,self.api)
+            logger.warning(f"Filtering {label} along Speaker Instance's returned no entries")
+        return SpeechGroup(newlist, self.api)
 
 
     def filterSpkrs(self, spkrs, incl_none=False):
-        """
-        The filterSpkrs function specifically filters the list of things in the class by speaker.
-        
-            self: Used to access the class attributes.
-            spkrs: Used to filter the list of things along the speakers.
-            incl_none=False: Used to include None objects in the list of returned objects.
-        :return: a list of the things that have a speaker with a character in the spkrs list.
-        :doc-author: Trelent
-        """
-        '''Filter on the Speech Character's'''
-        logger.debug("Filtering " + self.__class__.__name__[1:] + " along Speaker's")
-        newlist = []
-        for thing in self._things:
-            #print(*(c.id for c in thing.spkr))
-            if( (thing is not None or (thing is None and incl_none)) and any(c.char in spkrs for c in thing.spkr) ):
-                newlist.append(thing)
+        '''Filter to speeches with one of `spkrs` among their speakers' underlying Characters'''
+
+        label = self.__class__.__name__[1:]
+        logger.debug(f"Filtering {label} along Speaker's")
+        newlist = [thing for thing in self._things if any(c.char in spkrs for c in thing.spkr)]
         if len(newlist) == 0:
-            logger.warning("Filtering " + self.__class__.__name__[1:] + " Speaker's returned no entries")
+            logger.warning(f"Filtering {label} along Speaker's returned no entries")
         return SpeechGroup(newlist, self.api)
 
 
     def filterAddrInstances(self, addrs, incl_none=False):
-        """
-        The filterAddrInstances function specifically filters the list of things in the current instance
-        of a class by whether or not they have an address character that is contained within a given list.
-        
-            self: Used to access the class's attributes and methods.
-            addrs: Used to filter the list of instances by the addressee instance.
-            incl_none=False: Used to include None values in the list.
-        :return: the list of things that are in addrs.
-        :doc-author: Trelent
-        """
-        '''Filter on the Speech Character Instances's'''
-        logger.debug("Filtering " + self.__class__.__name__[1:] + " along Addressee Instance's")
-        newlist = []
-        for thing in self._things:
-            if( (thing is not None or (thing is None and incl_none)) and any(c in addrs for c in thing.addr) ):
-                newlist.append(thing)
+        '''Filter to speeches with one of `addrs` among their addressee instances'''
+
+        label = self.__class__.__name__[1:]
+        logger.debug(f"Filtering {label} along Addressee Instance's")
+        newlist = [thing for thing in self._things if any(c in addrs for c in thing.addr)]
         if len(newlist) == 0:
-            logger.warning("Filtering " + self.__class__.__name__[1:] + " Addressee Instance's returned no entries")
+            logger.warning(f"Filtering {label} along Addressee Instance's returned no entries")
         return SpeechGroup(newlist, self.api)
 
 
     def filterAddrs(self, addrs, incl_none=False):
-        """
-        The filterAddrs function is used to filter the list of things that are being processed by the Speech Character's.
-        
-            self: Used to access the class attributes and methods.
-            addrs: Used to filter the list of things.
-            incl_none=False: Used to include None values in the list of things.
-        :return: a list of things that match the filter.
-        :doc-author: Trelent
-        """
-        '''Filter on the Speech Character's'''
-        logger.debug("Filtering " + self.__class__.__name__[1:] + " along Addressee's")
-        newlist = []
-        for thing in self._things:
-            if( (thing is not None or (thing is None and incl_none)) and any(c.char in addrs for c in thing.addr) ):
-                newlist.append(thing)
+        '''Filter to speeches with one of `addrs` among their addressees' underlying Characters'''
+
+        label = self.__class__.__name__[1:]
+        logger.debug(f"Filtering {label} along Addressee's")
+        newlist = [thing for thing in self._things if any(c.char in addrs for c in thing.addr)]
         if len(newlist) == 0:
-            logger.warning("Filtering " + self.__class__.__name__[1:] + " Addressee's returned no entries")
-        return SpeechGroup(newlist, self.api )
+            logger.warning(f"Filtering {label} along Addressee's returned no entries")
+        return SpeechGroup(newlist, self.api)
 
 
     def filterParts(self, parts, incl_none=False):
-        """
-        The filterParts function is used to filter the list of things along the part's.
-        
-            self: Used to access the class instance in which it is called.
-            parts: Used to filter the list of things along the parts.
-            incl_none=False: Used to include None values in the list.
-        :return: a list of things that meet the given parts.
-        :doc-author: Trelent
-        """
         '''Filter on the Speech Part's'''
-        logger.debug("Filtering " + self.__class__.__name__[1:] + " along Part's")
-        newlist = []
-        for thing in self._things:
-            if( (thing is not None or (thing is None and incl_none)) and thing.part in parts ):
-                newlist.append(thing)
-        if len(newlist) == 0:
-            logger.warning("Filtering " + self.__class__.__name__[1:] + " Part's returned no entries")
-        return SpeechGroup(newlist, self.api)
+
+        return self.filterBy('part', parts, incl_none)
 
 
     def filterTypes(self, types, incl_none=False):
-        """
-        The filterTypes function specifically filters the list of things by type.
-        
-            self: Used to access the class attributes.
-            types: Used to filter the list of things along the types.
-            incl_none=False: Used to include None's in the list.
-        :return: a list of things that are not None and have a type in the types argument.
-        :doc-author: Trelent
-        """
         '''Filter on the Speech Type's'''
-        logger.debug("Filtering " + self.__class__.__name__[1:] + " along Type's")
-        newlist = []
-        for thing in self._things:
-            if( (thing is not None or (thing is None and incl_none)) and thing.type in types ):
-                newlist.append(thing)
-        if len(newlist) == 0:
-            logger.warning("Filtering " + self.__class__.__name__[1:] + " Type's returned no entries")
-        return SpeechGroup(newlist, self.api)
+
+        return self.filterBy('type', types, incl_none)
 
 
     def filterWorks(self, works, incl_none=False):
-        """
-        The filterWorks function specifically filters the list of things along the works.
-        
-            self: Used to access the class attributes.
-            works: Used to filter the list of things.
-            incl_none=False: Used to include None values in the list.
-        :return: a list of things that are in the works.
-        :doc-author: Trelent
-        """
         '''Filter on the Speech Work's'''
-        logger.debug("Filtering " + self.__class__.__name__[1:] + " along Work's")
-        newlist = []
-        for thing in self._things:
-            if( (thing is not None or (thing is None and incl_none)) and thing.work in works ):
-                newlist.append(thing)
-        if len(newlist) == 0:
-            logger.warning("Filtering " + self.__class__.__name__[1:] + " Work's returned no entries")
-        return SpeechGroup(newlist, self.api)
+
+        return self.filterBy('work', works, incl_none)
 
 
 class Speech(object):
@@ -1739,38 +1353,22 @@ class Speech(object):
 
         
     def _from_data(self, data):
-        """
-        The _from_data function populates attributes from a dict. 
-        It is called by the __init__ function of the Speech class, and should not be called directly.
-        
-        
-            self: Access the attributes of the class
-            data: Populate the attributes of the instance
-        :return: A dictionary of the attributes
-        :doc-author: Trelent
-        """
-        '''populate attributes from dict'''    
-        
-        if 'id' in data:
-            self.id = data['id']
+        '''populate attributes from dict'''
+
+        _assign_fields(self, data, ['id', 'seq', 'l_fi', 'l_la', 'part', 'level', 'type'])
+
         if 'cluster' in data:
             if self.index:
                 self.cluster = self.api.indexedSpeechCluster(data['cluster'])
             else:
                 self.cluster = SpeechCluster(data['cluster'], api=self.api)
                 data['cluster'] = self.cluster
-        if 'seq' in data:
-            self.seq = data['seq']
-        if 'l_fi' in data:
-            self.l_fi = data['l_fi']
-        if 'l_la' in data:
-            self.l_la = data['l_la']
         if 'spkr' in data:
             if self.index:
                 self.spkr = [self.api.indexedCharacterInstance(c)
                                     for c in data['spkr']]
             else:
-                self.spkr = [CharacterInstance(c, api=self.api) 
+                self.spkr = [CharacterInstance(c, api=self.api)
                                     for c in data['spkr']]
             data['spkr'] = self.spkr
         if 'addr' in data:
@@ -1778,28 +1376,14 @@ class Speech(object):
                 self.addr = [self.api.indexedCharacterInstance(c)
                                     for c in data['addr']]
             else:
-                self.addr = [CharacterInstance(c, api=self.api) 
+                self.addr = [CharacterInstance(c, api=self.api)
                                     for c in data['addr']]
             data['addr'] = self.addr
-        if 'part' in data:
-            self.part = data['part']
-        if 'level' in data:
-            self.level = data['level']
-        if 'type' in data:
-            self.type = data['type']
         if 'work' in data:
             self.work = self.api.indexedWork(data['work'])
 
 
     def __repr__(self):
-        """
-        The __repr__ function is what is called when you try to &quot;print&quot; an object. It returns a string representation of the object, which is how the object appears when output in the console.
-        
-        
-            self: Refer to the object itself
-        :return: The string representation of the object
-        :doc-author: Trelent
-        """
         return f'<Speech {self.id}: {self.work.title} {self.l_range}>'
        
         
@@ -1816,57 +1400,24 @@ class Speech(object):
         
     @property
     def author(self):
-        """
-        The author function returns the name of the author of this book.
-        
-        
-            self: Access the attributes and methods of the class in python
-        :return: The author of the book
-        :doc-author: Trelent
-        """
         '''shortcut to author (via work)'''
         return self.work.author
 
 
     @property
     def lang(self):
-        """
-        The lang function returns the language code of the current locale setting.
-        
-        
-            self: Reference the instance of the class
-        :return: The language of the current document
-        :doc-author: Trelent
-        """
-        '''shortcut to language (via work)'''        
+        '''shortcut to language (via work)'''
         return self.work.lang
-    
-    
+
+
     @property
     def l_range(self):
-        """
-        The l_range function returns a list of line numbers from the first parameter to the second.
-        The first parameter is inclusive, while the second is exclusive.
-        
-            self: Access variables that belongs to the class
-        :return: The first and last line numbers of the file
-        :doc-author: Trelent
-        """
         '''line range in format <first>-<last>'''
         return f'{self.l_fi}-{self.l_la}'
-    
+
 
     @property
     def urn(self):
-        """
-        The urn function returns the CTS URN for the passage.
-        
-        
-        
-            self: Access variables that belongs to the class
-        :return: A list of the tokens in a passage
-        :doc-author: Trelent
-        """
         '''cts urn for the passage'''
         return f'{self.work.urn}:{self.l_range}'
     
@@ -1882,18 +1433,8 @@ class Speech(object):
 
     
     def getCTS(self):
-        """
-        The getCTS function returns the CTS URN corresponding to the speech.
-           The function takes as input a URN for a work and an integer indicating 
-           which speech in that work we want to get. It returns a string containing 
-           the CTS URN of that speech.
-        
-            self: Refer to the object itself
-        :return: The cts passage corresponding to the speech
-        :doc-author: Trelent
-        """
         '''Get the CTS passage corresponding to the speech'''
-        
+
         # bail out if work has no urn
         if (self.work.urn == '') or (self.work.urn is None):
             return None
@@ -1912,13 +1453,8 @@ class Speech(object):
 
 
     def isRepliedTo(self):
-        """
-        The isRepliedTo function is used to determine whether or not a speech has been responded to.
-        
-            self: Used to access the attributes of the class.
-        :return: a boolean value of True if the speech is a reply to another speech in the cluster, and False otherwise.
-        :doc-author: Trelent
-        """
+        '''True if a later speech in the cluster addresses one of this speech's speakers'''
+
         SpeechesInCluster = self.api.getSpeeches(cluster_id=self.cluster.id)
         for thing in SpeechesInCluster:
             if(thing.seq > self.seq):
@@ -1926,20 +1462,16 @@ class Speech(object):
                     return True
         return False
 
-    
+
     def isInterrupted(self):
-        """
-        The isInterrupted function specifically accomplishes two things:
-        1.
-        
-            self: Used to access the class attributes.
-        :return: False when there are no interruptions in the cluster.
-        :doc-author: Trelent
-        """
+        '''True if the following speech in the cluster interrupts this one'''
+
         speech = [speechs for speechs in self.api.getSpeeches(cluster_id=self.cluster.id) if speechs.seq == self.seq + 1]
         return len(speech) > 0 and any(responder in speech[0].spkr for responder in self.addr)
-    
+
     def isInterruption(self):
+        '''True if this speech interrupts the preceding speech in the cluster'''
+
         speech = [speechs for speechs in self.api.getSpeeches(cluster_id=self.cluster.id) if speechs.seq == self.seq - 1]
         return len(speech) > 0 and any(talker in speech[0].addr for talker in self.spkr)
 
@@ -2092,19 +1624,8 @@ class DicesAPI(object):
 
 
     def getPagedJSON(self, endpoint, params=None, progress=False):
-        """
-        The getPagedJSON function retrieves data from the API and returns a list of JSON objects.
-        
-        
-        
-            self: Access variables that belong to the class
-            endpoint: Specify the api endpoint
-            params=None: Pass in a dictionary of parameters to be passed into the api call
-            progress=False: Turn off the progress bar
-        :return: A list of dictionaries
-        :doc-author: Trelent
-        """
         '''Collect paged results from the API'''
+
         logger.info("Retrieving data from the database")
         
         # tidy slashes
@@ -2166,17 +1687,8 @@ class DicesAPI(object):
 
 
     def getSpeeches(self, progress=False, **kwargs):
-        """
-        The getSpeeches function retrieves speeches from the API and returns them as a SpeechGroup object.
-        
-            self: Used to refer to the object instance.
-            progress=False: Used to turn off the progress bar.
-            **kwargs: Used to pass a variable number of keyword arguments to a function.
-        :return: a list of speeches.
-        :doc-author: Trelent
-        """
         '''Retrieve speeches from API'''
-        
+
         logger.debug("Attempting to fetch a SpeechGroup")
         # get the results from the speeches endpoint
         results = self.getPagedJSON('speeches', dict(**kwargs), progress=progress)
@@ -2190,16 +1702,8 @@ class DicesAPI(object):
 
 
     def getClusters(self, progress=False, **kwargs):
-        """
-        The getClusters function retrieves the clusters from the API and returns them as a list of Cluster objects.
-        
-            self: Used to access the API object's properties.
-            progress=False: Used to turn off the progress bar.
-            **kwargs: Used to pass a variable number of keyword arguments to a function.
-        :return: a list of clusters.
-        :doc-author: Trelent
-        """
         '''Retrieve speech clusters from API'''
+
         logger.debug("Attempting to fetch a ClusterGroup")
                 
         # get the results from the clusters endpoint
@@ -2213,16 +1717,8 @@ class DicesAPI(object):
 
     
     def getCharacters(self, progress=False, **kwargs):
-        """
-        The getCharacters function retrieves a list of Character objects.
-        
-            self: Used to refer to the object instance itself.
-            progress=False: Used to tell the function to not display a progress bar.
-            **kwargs: Used to pass a variable number of arguments to a function.
-        :return: a list of _Character objects.
-        :doc-author: Trelent
-        """
         '''Retrieve characters from API'''
+
         logger.debug("Attempting to fetch a CharactersGroup")
         
         # get the results from the characters endpoint
@@ -2236,16 +1732,8 @@ class DicesAPI(object):
 
 
     def getWorks(self, progress=False, **kwargs):
-        """
-        The getWorks function is used to fetch works from the API.
-        
-            self: Used to refer to the object itself.
-            progress=False: Used to tell the function whether or not to print out a progress bar.
-            **kwargs: Used to pass a dictionary of key-value pairs to the API.
-        :return: a WorkGroup object.
-        :doc-author: Trelent
-        """
         '''Fetch works from the API'''
+
         logger.debug("Attempting to fetch a WorksGroup")
         
         results = self.getPagedJSON('works', dict(**kwargs), progress=progress)
@@ -2256,15 +1744,7 @@ class DicesAPI(object):
 
 
     def getAuthors(self, progress=False, **kwargs):
-        """
-        The getAuthors function is used to retrieve a list of authors from the API.
-        
-            self: Used to access the API object's properties.
-            progress=False: Used to tell the function not to display a progress bar.
-            **kwargs: Used to pass keyworded variable length of arguments to a function.
-        :return: a AuthorGroup object.
-        :doc-author: Trelent
-        """
+        '''Fetch authors from the API'''
 
         logger.debug("Attempting to fetch a AuthorGroup")
 
@@ -2276,18 +1756,9 @@ class DicesAPI(object):
 
 
     def getInstances(self, progress=False, **kwargs):
-        """
-        The getInstances function specifically accomplishes the following:
-            1.
-        
-            self: Used to access the class variables.
-            progress=False: Used to specify if the function should display a progress bar.
-            **kwargs: Used to pass a variable number of keyword arguments to the function.
-        :return: a list of dictionaries.
-        :doc-author: Trelent
-        """
-        '''Fetch character instances from the API'''  
-        logger.debug("Attempting to fetch a CharacterInstanceGroup")  
+        '''Fetch character instances from the API'''
+
+        logger.debug("Attempting to fetch a CharacterInstanceGroup")
         results = self.getPagedJSON('instances', dict(**kwargs), progress=progress)
 
         instances = CharacterInstanceGroup([self.indexedCharacterInstance(i) for i in results], api=self)
@@ -2296,16 +1767,8 @@ class DicesAPI(object):
         
     
     def indexedAuthor(self, data):
-        """
-        The indexedAuthor function creates an author object from the data that is passed to it.
-        
-            self: Used to access the class variables.
-            data: Used to pass the data from the API to this function.
-        :return: a new author object if the id doesn't exist in the index, and an existing object if it does.
-        :doc-author: Trelent
-        """
         '''Create an author in the index'''
-        
+
         # if someone has passed an existing author object
         if isinstance(data, Author):
             if data.id in self._author_index:
@@ -2339,16 +1802,8 @@ class DicesAPI(object):
 
 
     def indexedWork(self, data):
-        """
-        The indexedWork function creates a new work object and adds it to the index.
-        
-            self: Used to access the class attributes.
-            data: Used to pass the work data to the Work class.
-        :return: the work if it is already in the index.
-        :doc-author: Trelent
-        """
         '''Create a work in the index'''
-        
+
         if isinstance(data, int):
             data = {"id": data}
         
@@ -2364,16 +1819,8 @@ class DicesAPI(object):
 
     
     def indexedSpeech(self, data):
-        """
-        The indexedSpeech function creates a speech object from the data that is passed to it.
-        
-            self: Used to reference the class instance.
-            data: Used to pass the speech data to the Speech class.
-        :return: the speech object that is created.
-        :doc-author: Trelent
-        """
         '''Create a speech in the index'''
-        
+
         if isinstance(data, int):
             data = {"id": data}
         
@@ -2388,18 +1835,8 @@ class DicesAPI(object):
 
         
     def indexedSpeechCluster(self, data):
-        """
-        The indexedSpeechCluster function is used to create a speech cluster in the index. 
-        If the ID of the speech cluster is already present in the index, it will fetch that object from cache. 
-        Otherwise, it will create a new SpeechCluster object and add it to both memory and disk cache.
-        
-            self: Reference the class instance
-            data: Pass the data from the api call
-        :return: A speechcluster object
-        :doc-author: Trelent
-        """
         '''Create a speech cluster in the index'''
-        
+
         if isinstance(data, int):
             data = {"id": data}
                 
@@ -2415,17 +1852,8 @@ class DicesAPI(object):
 
 
     def indexedCharacter(self, data):
-        """
-        The indexedCharacter function is used to create a character in the index. If the character already exists, it is recycled and returned.
-        Otherwise, a new Character object is created with the data passed in as an argument.
-        
-            self: Reference the class instance
-            data: Pass in the json data for the character
-        :return: A character object
-        :doc-author: Trelent
-        """
         '''Create a character in the index'''
-        
+
         if isinstance(data, int):
             data = {"id": data}
                 
@@ -2443,17 +1871,8 @@ class DicesAPI(object):
 
 
     def indexedCharacterInstance(self, data):
-        """
-        The indexedCharacterInstance function is used to create a character instance in the index. If the character instance already exists, it is fetched from the index.
-        
-        
-            self: Access the api object's properties
-            data: Pass the data from the api to characterinstance
-        :return: A characterinstance object
-        :doc-author: Trelent
-        """
         '''Create a character instance in the index'''
-        
+
         if isinstance(data, int):
             data = {"id": data}
                 

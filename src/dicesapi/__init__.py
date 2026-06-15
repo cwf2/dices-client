@@ -1793,6 +1793,8 @@ class DicesAPI(object):
         # otherwise, assume JSON data
         else:
             if data['id'] in self._author_index:
+                if len(data) > 1:
+                    self._author_index[data['id']]._from_data(data)
                 logger.debug("Fetching author with ID " + str(data['id']))
             else:
                 logger.debug("Creating new author with ID " + str(data['id']))
@@ -1809,6 +1811,8 @@ class DicesAPI(object):
         
         if data['id'] in self._work_index:
             w = self._work_index[data['id']]
+            if len(data) > 1:
+                w._from_data(data)
             logger.debug("Fetching work with ID " + str(data['id']))
         else:
             w = Work(data, api=self, index=True)
@@ -1826,6 +1830,8 @@ class DicesAPI(object):
         
         if data['id'] in self._speech_index:
             s = self._speech_index[data['id']]
+            if len(data) > 1:
+                s._from_data(data)
             logger.debug("Fetching speech with ID " + str(data['id']))
         else:
             s = Speech(data, api=self, index=True)
@@ -1842,6 +1848,8 @@ class DicesAPI(object):
                 
         if data['id'] in self._speechcluster_index:
             s = self._speechcluster_index[data['id']]
+            if len(data) > 1:
+                s._from_data(data)
             logger.debug("Fetching cluster with ID " + str(data['id']))
         else:
             s = SpeechCluster(data, api=self, index=True)
@@ -1860,6 +1868,8 @@ class DicesAPI(object):
         if data['id'] in self._character_index:
             #print("Recycling character with ID " + str(data['id']))
             c = self._character_index[data['id']]
+            if len(data) > 1:
+                c._from_data(data)
             logger.debug("Fetching character with ID " + str(data['id']))
         else:
             #print("Adding character with ID " + str(data['id']))
@@ -1878,6 +1888,8 @@ class DicesAPI(object):
                 
         if data['id'] in self._characterinstance_index:
             c = self._characterinstance_index[data['id']]
+            if len(data) > 1:
+                c._from_data(data)
             logger.debug("Fetching character instance with ID " + str(data['id']))
         else:
             c = CharacterInstance(data, api=self, index=True)

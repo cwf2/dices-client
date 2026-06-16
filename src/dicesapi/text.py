@@ -8,17 +8,88 @@ For part-of-speech tagging, lemmatization, etc., see the optional
 the `Passage` class when imported.
 '''
 
-from MyCapytain.resolvers.cts.api import HttpCtsResolver
-from MyCapytain.retrievers.cts5 import HttpCtsRetriever
 import requests
 from copy import deepcopy
+from lxml import etree
+import bisect
 import re
 
 from . import logger
 
-DEFAULT_SERVERS = {None: 'https://scaife-cts.perseus.org/api/cts'}
+DEFAULT_CTS_PATTERN = "https://atlas.perseus.tufts.edu/library/passage/{cts_urn}/xml/"
 PUNCT = r'[ ,·.;\n—‘’“”]+'
 
+# XML namespaces used by Perseus TEI, needed for xpath
+nsmap = {
+    "cts": "http://chs.harvard.edu/xmlns/cts",
+    "tei": "http://www.tei-c.org/ns/1.0",
+    "py": "http://codespeak.net/lxml/objectify/pytype",
+}
+
+
+#-----------------------------------------------------------------------------------
+# Cludge to fix bad Perseus URNs: FIXME!!
+#
+# A set of regexes to replace our loci with Perseus-specific loci
+# These fall into two different categories:
+#   - some specific loci are mismatched because editions differ
+#   - Perseus adds an extra hierarchical level in several of Claudian's
+#     poems to distinguish the preface from the body of individual books.
+
+PERSEUS_ADJUSTMENTS = {
+    # Changes due to weird numbering schemes
+    # Claudian
+    #  - In Rufinum - change 1., 2. to 1.1., 2.1.
+    "urn:cts:latinLit:stoa0089.stoa009.perseus-lat2": [(r"(\d)\.", r"\1.1.")],
+    #  - DRP - change 1., 2. to 1.1., 2.1., except 2.praef -> 2.pr
+    "urn:cts:latinLit:stoa0089.stoa005.perseus-lat2": [(r"(\d)\.(\d)", r"\1.1.\2"),
+                                                       (r"praef", r"pr")],
+    #  - De Bello Gothico - add 1. to every locus
+    "urn:cts:latinLit:stoa0089.stoa003.perseus-lat2": [(r"(.+)", r"1.\1")],
+    #  - Epithalamium - add 1. to every locus
+    "urn:cts:latinLit:stoa0089.stoa006.perseus-lat2": [(r"(.+)", r"1.\1")],
+    #  - 3 Hon. - add 1. to every locus
+    "urn:cts:latinLit:stoa0089.stoa010.perseus-lat2": [(r"(.+)", r"1.\1")],
+    #  - 6 Hon. - add 1. to every locus
+    "urn:cts:latinLit:stoa0089.stoa012.perseus-lat2": [(r"(.+)", r"1.\1")],
+    #  - de cons. Manlii Theodori - add 1. to every locus
+    "urn:cts:latinLit:stoa0089.stoa013.perseus-lat2": [(r"(.+)", r"1.\1")],
+
+    # Prudentius Psychomachia - add 1. to every locus
+    "urn:cts:latinLit:stoa0238.stoa002.perseus-lat2": [(r"(.+)", r"1.\1")],
+
+    # Changes due to differences between editions
+    # A.R. Argon. - line 3.739 doesn't exist
+    "urn:cts:greekLit:tlg0001.tlg001.perseus-grc2": [(r"3\.739", r"3.738")],
+    # Hom. Od. - line 10.456 doesn't exist
+    "urn:cts:greekLit:tlg0012.tlg002.perseus-grc2": [(r"10\.456", r"10.457")],
+    # Ov. Met - lines 1.546, 4.802–803, 14.385 don't exist
+    "urn:cts:latinLit:phi0959.phi006.perseus-lat2": [(r"1\.546", r"1.547"),
+                                                     (r"4\.803", r"4.801"),
+                                                     (r"14\.385", r"14.384")],
+    # Stat. Theb. - line numbers for this speech are very wrong -- FIXME
+    "urn:cts:latinLit:phi1020.phi001.perseus-lat2": [(r"4\.832", r"4.825"),
+                                                     (r"4\.850", r"4.842")],
+}
+
+def getAdjustedUrn(speech):
+    '''Work-specific cludges
+        - to accommodate peculiarities of the way Perseus translates loci into URNs
+    '''
+
+    l_fi, l_la = speech.l_fi, speech.l_la
+    
+    if speech.work.urn in PERSEUS_ADJUSTMENTS:
+        for pat, repl in PERSEUS_ADJUSTMENTS[speech.work.urn]:
+            l_fi = re.sub(pat, repl, l_fi)
+            l_la = re.sub(pat, repl, l_la)
+        urn = f"{speech.work.urn}:{l_fi}-{l_la}"
+    
+        return urn
+    else:
+        return speech.urn
+
+#-----------------------------------------------------------------------------------
 
 def squashWhiteSpace(text):
     '''strip, reduce all contiguous whitespace to single space'''
@@ -33,7 +104,7 @@ class Passage(object):
     def __init__(self, speech=None):
         self.speech = speech
         self.line_array = None
-        self.cts = None
+        self.xml = None
         self.nlp = None
         self.cltk_doc = None
         self.spacy_doc = None
@@ -41,38 +112,83 @@ class Passage(object):
         self._token_index = None
         self._cltk_token_index = None
         self._spacy_token_index = None
-        self.text = None
+
 
     def buildLineArray(self):
-        '''Parse CTS passage into lines'''
+        '''Turn XML passage into an array of verse lines'''
 
-        if self.cts is None:
-            return
+        # bail if no XML
+        if self.xml is None:
+            return None
+    
+        # initialize line array
+        line_array = []
 
-        # build line array
-
-        xml = deepcopy(self.cts.xml)
-
-        for note in xml.findall('.//l//note', namespaces=xml.nsmap):
+        # work from copy of xml
+        xml = deepcopy(self.xml)
+        
+        # remove notes
+        for note in xml.findall(".//tei:note", namespaces=nsmap):
             note.clear(keep_tail=True)
+        
+        # remove deleted lines
+        for del_ in xml.findall(".//tei:del", namespaces=nsmap):
+            del_.clear(keep_tail=True)
+        
+        # iterate over verse lines
+        for l in xml.findall(".//tei:l", namespaces=nsmap):
+            line_num = l.get("n")
+            if line_num is None:
+                continue
+        
+            line_text = squashWhiteSpace("".join(s for s in l.itertext()))
+            line_array.append(dict(
+                n = line_num,
+                seq = len(line_array),
+                text = line_text,
+            ))
 
-        lines = xml.findall('.//l', namespaces=xml.nsmap)
+        self.line_array = line_array
 
-        self.line_array = [dict(
-            n = l.get('n'),
-            text = squashWhiteSpace(''.join(l.itertext())),
-        ) for l in lines]
+    @property
+    def text(self):
+        '''Return text of passage as one long string'''
+        
+        # bail if no line_array
+        if not self.line_array:
+            return None
+        
+        # join all the lines together with single spaces
+        text = " ".join(l["text"] for l in self.line_array)
+        
+        return text
 
-        # build line index
 
-        self._line_index = []
+    def buildLineIndex(self):
+        '''Sequence of cumulative string lengths by line
+            - used after parsing to match words to their lines 
+              based on initial character position in the long string.
+        '''
+
+        # bail if no line_array
+        if not self.line_array:
+            return None
+
+        # initialize index, cumulative sum
+        line_index = []
         cumsum = 0
 
-        for i in range(len(self.line_array)):
-            self._line_index.append(cumsum)
-            cumsum += len(self.line_array[i]['text']) + 1
+        # iterate over line array, add length (plus 1 for spaces between lines)
+        for line in self.line_array:
+            line_index.append(cumsum)
+            cumsum += len(line["text"]) + 1
 
-        self.text = ' '.join(l['text'] for l in self.line_array)
+        # make sure the count works out
+        if cumsum != len(self.text) + 1:
+            logger.warning(f"buildLineIndex: character count doesn't match: {speech}")
+            return None
+
+        self._line_index = line_index
 
 
     def getWordIndex(self, word):
@@ -121,15 +237,14 @@ class Passage(object):
         if self._line_index is None:
             return
 
+        # get position within the long string of the first character of this word
         char_pos = self.getTextPos(word)
 
         if char_pos is None:
             return
-
-        for i, length in enumerate(self._line_index):
-            if length > char_pos:
-                i -= 1
-                break
+            
+        # find appropriate line for this character position
+        i = bisect.bisect_right(self._line_index, pos) - 1
 
         return i
 
@@ -178,76 +293,72 @@ class CtsAPI(object):
     '''interace to digital texts via CTS
     '''
 
-    def __init__(self, servers=DEFAULT_SERVERS, dices_api=None):
+    def __init__(self, cts_pattern=DEFAULT_CTS_PATTERN, dices_api=None):
         self.dices_api = dices_api
-        self._servers = servers
-        self._resolvers = self._buildResolvers()
+        self.cts_pattern = cts_pattern
         self.__cts_cache__ = {}
-
-    def _buildResolvers(self):
-        '''create a set of urn-specific resolvers'''
-
-        resolvers = dict()
-        for urn, server in self._servers.items():
-            resolvers[urn] = HttpCtsResolver(HttpCtsRetriever(server))
-        return resolvers
-
-    def getResolver(self, urn):
-        '''return a resolved for the given text'''
-
-        return self._resolvers.get(urn, self._resolvers[None])
-
-
-    def getCTS(self, speech, force_download=False, cache=True):
-        '''Fetch the CTS passage corresponding to the speech'''
-
-        if cache:
-            # return cached version if exists
-            cache_key = f'{speech.work.urn}:{speech.l_range}'
-            if cache_key in self.__cts_cache__:
-                if not force_download:
-                    return self.__cts_cache__[cache_key]
-
+        
+        
+    def getXML(self, speech, force_download=False, cache=True):
+        '''Fetch the CTS passage corresponding to the speech
+            return as parsed XML
+        '''
+        
         # bail out if work has no urn
-        if (speech.work.urn == '') or (speech.work.urn is None):
+        if not speech.work.urn:
             return None
 
-        # check for urn-specific resolver, otherwise, use default
-        resolver = self.getResolver(speech.work.urn)
+        # compose URL
+        url = self.cts_pattern.format(cts_urn=getAdjustedUrn(speech))
 
-        # retrieve the passage
-        try:
-            cts_passage = resolver.getTextualNode(speech.work.urn, speech.l_range)
-
-        except requests.exceptions.HTTPError as e:
-            logger.warning(f'Failed to download {speech.urn}: ' + str(e))
-            return None
-
-        # cache
+        # return cached version if exists
         if cache:
-            self.__cts_cache__[cache_key] = cts_passage
+            if url in self.__cts_cache__:
+                if not force_download:
+                    return self.__cts_cache__[url]
+        
+        # retrieve using requests
+        res = requests.get(url)
+        if not res.ok:
+            logger.warning(f"failed to download {speech.urn}: {res.status_code}: {res.reason}")
+            return None
+        self.__cts_cache__[url] = res
+    
+        # parse xml
+        xml = etree.fromstring(res.text)
+        
+        return xml
+        
+    
+    def getCTS(self, speech, force_download=False, cache=True):
+        '''Fetch the CTS passage corresponding to the speech
+        
+            - This is broken. To be removed.
+        '''
+        logger.warning("Passage.getCTS() is deprecated and returns no results. Use Passage.getXML()")
 
-        return cts_passage
+        return None
 
 
-    def getPassage(self, speech, force_download=False, cache=True, cltk=False):
-        '''Return a parsed Passage object for the speech
+    def getPassage(self, speech, force_download=False, cache=True, nlp=None):
+        '''Run the text retrieval pipeline for a speech. Returns Passage object.
 
         Args:
-            cltk (bool): If True, also run the CLTK NLP pipeline on the
-                passage. Requires `dicesapi.nlp_cltk` to have been imported.
+            speech: a DICES Speech object with valid work URN
+            cache: locally cache successfully retrieved passages to avoid overburdening servers
+            force_download: re-download even if cached response exists
         '''
 
-        cts = self.getCTS(speech, force_download=force_download, cache=cache)
+        xml = self.getXML(speech, force_download=force_download, cache=cache)
 
-        if cts is None:
+        if xml is None:
             return
 
         p = Passage(speech)
-        p.cts = cts
+        p.xml = xml
         p.buildLineArray()
 
-        if cltk:
+        if nlp == "cltk":
             if not hasattr(p, 'runCltkPipeline'):
                 raise ImportError(
                     'getPassage() was called with cltk=True, but the CLTK '

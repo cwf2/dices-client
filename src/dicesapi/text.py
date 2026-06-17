@@ -4,8 +4,8 @@ This module covers retrieval and line/text handling for the Greek and Latin
 passages corresponding to speeches. It has no NLP dependencies.
 
 For part-of-speech tagging, lemmatization, etc., see the optional
-`dicesapi.nlp_spacy` and `dicesapi.nlp_cltk` modules, which add methods to
-the `Passage` class when imported.
+`dicesapi.nlp_spacy` module, which adds methods to the `Passage` class when
+imported.
 '''
 
 import requests
@@ -106,41 +106,38 @@ class Passage(object):
         self.line_array = None
         self.xml = None
         self.nlp = None
-        self.cltk_doc = None
         self.spacy_doc = None
-        self._line_index = None
+        self._line_offsets = None
         self._token_index = None
-        self._cltk_token_index = None
-        self._spacy_token_index = None
 
 
-    def buildLineArray(self):
+    def _buildLineArray(self):
         '''Turn XML passage into an array of verse lines'''
 
         # bail if no XML
         if self.xml is None:
             return None
-    
+
         # initialize line array
         line_array = []
 
         # work from copy of xml
         xml = deepcopy(self.xml)
-        
+
         # remove notes
         for note in xml.findall(".//tei:note", namespaces=nsmap):
             note.clear(keep_tail=True)
-        
+
         # remove deleted lines
         for del_ in xml.findall(".//tei:del", namespaces=nsmap):
             del_.clear(keep_tail=True)
-        
+
         # iterate over verse lines
         for l in xml.findall(".//tei:l", namespaces=nsmap):
             line_num = l.get("n")
             if line_num is None:
                 continue
-        
+
             line_text = squashWhiteSpace("".join(s for s in l.itertext()))
             line_array.append(dict(
                 n = line_num,
@@ -164,39 +161,31 @@ class Passage(object):
         return text
 
 
-    def buildLineIndex(self):
-        '''Sequence of cumulative string lengths by line
-            - used after parsing to match words to their lines 
-              based on initial character position in the long string.
+    def _buildLineIndex(self):
+        '''Build _line_offsets: cumulative character start positions for each line.
+
+        Used to map a token's character position back to its verse line via bisect.
         '''
 
         # bail if no line_array
         if not self.line_array:
             return None
 
-        # initialize index, cumulative sum
-        line_index = []
+        # initialize offsets, cumulative sum
+        line_offsets = []
         cumsum = 0
 
         # iterate over line array, add length (plus 1 for spaces between lines)
         for line in self.line_array:
-            line_index.append(cumsum)
+            line_offsets.append(cumsum)
             cumsum += len(line["text"]) + 1
 
         # make sure the count works out
         if cumsum != len(self.text) + 1:
-            logger.warning(f"buildLineIndex: character count doesn't match: {speech}")
+            logger.warning(f"_buildLineIndex: character count doesn't match: {self.speech}")
             return None
 
-        self._line_index = line_index
-
-
-    def getWordIndex(self, word):
-        '''Return the word's position in the list of words'''
-        if self.nlp is None:
-            return
-
-        return list(self.nlp).index(word)
+        self._line_offsets = line_offsets
 
 
     def getTextPos(self, word):
@@ -207,19 +196,11 @@ class Passage(object):
         if self._token_index is None:
             return
 
-        # if passed a token from an NLP library, determine its index
-        # via the appropriate (optional) extension module; otherwise
+        # if passed a spaCy Token, get its integer index; otherwise
         # treat `word` as an index into self._token_index directly
-        if hasattr(word, 'string'):
-            # duck-types as a cltk Word; requires dicesapi.nlp_cltk
-            word = self.getCltkWordIndex(word)
-            token_index = self._cltk_token_index
-        elif hasattr(word, 'text') and hasattr(word, 'i'):
-            # duck-types as a spacy Token; requires dicesapi.nlp_spacy
+        if hasattr(word, 'text') and hasattr(word, 'i'):
             word = self.getSpacyWordIndex(word)
-            token_index = self._spacy_token_index
-        else:
-            token_index = self._token_index
+        token_index = self._token_index
 
         try:
             idx = token_index[word]
@@ -234,7 +215,7 @@ class Passage(object):
             return
         if self._token_index is None:
             return
-        if self._line_index is None:
+        if self._line_offsets is None:
             return
 
         # get position within the long string of the first character of this word
@@ -244,7 +225,7 @@ class Passage(object):
             return
             
         # find appropriate line for this character position
-        i = bisect.bisect_right(self._line_index, pos) - 1
+        i = bisect.bisect_right(self._line_offsets, char_pos) - 1
 
         return i
 
@@ -255,7 +236,7 @@ class Passage(object):
         char_pos = self.getTextPos(word)
         i = self.getLineIndex(word)
 
-        return char_pos - self._line_index[i]
+        return char_pos - self._line_offsets[i]
 
 
     def getLine(self, word):
@@ -289,82 +270,45 @@ class Passage(object):
             return html
 
 
-class CtsAPI(object):
-    '''interace to digital texts via CTS
+def getXML(speech, force=False):
+    '''Fetch the CTS passage for a speech, returning parsed XML.
+
+    Reads cts_pattern and cts_cache from speech.api.config.
+    Returns None if the work has no URN or the request fails.
     '''
 
-    def __init__(self, cts_pattern=DEFAULT_CTS_PATTERN, dices_api=None):
-        self.dices_api = dices_api
-        self.cts_pattern = cts_pattern
-        self.__cts_cache__ = {}
-        
-        
-    def getXML(self, speech, force_download=False, cache=True):
-        '''Fetch the CTS passage corresponding to the speech
-            return as parsed XML
-        '''
-        
-        # bail out if work has no urn
-        if not speech.work.urn:
-            return None
-
-        # compose URL
-        url = self.cts_pattern.format(cts_urn=getAdjustedUrn(speech))
-
-        # return cached version if exists
-        if cache:
-            if url in self.__cts_cache__:
-                if not force_download:
-                    return self.__cts_cache__[url]
-        
-        # retrieve using requests
-        res = requests.get(url)
-        if not res.ok:
-            logger.warning(f"failed to download {speech.urn}: {res.status_code}: {res.reason}")
-            return None
-        self.__cts_cache__[url] = res
-    
-        # parse xml
-        xml = etree.fromstring(res.text)
-        
-        return xml
-        
-    
-    def getCTS(self, speech, force_download=False, cache=True):
-        '''Fetch the CTS passage corresponding to the speech
-        
-            - This is broken. To be removed.
-        '''
-        logger.warning("Passage.getCTS() is deprecated and returns no results. Use Passage.getXML()")
-
+    if not speech.work.urn:
         return None
 
+    config = speech.api.config
+    url = config['cts_pattern'].format(cts_urn=getAdjustedUrn(speech))
+    cache = config['cts_cache']
 
-    def getPassage(self, speech, force_download=False, cache=True, nlp=None):
-        '''Run the text retrieval pipeline for a speech. Returns Passage object.
+    if not force and url in cache:
+        return cache[url]
 
-        Args:
-            speech: a DICES Speech object with valid work URN
-            cache: locally cache successfully retrieved passages to avoid overburdening servers
-            force_download: re-download even if cached response exists
-        '''
+    res = requests.get(url)
+    if not res.ok:
+        logger.warning(f"failed to download {speech.urn}: {res.status_code}: {res.reason}")
+        return None
 
-        xml = self.getXML(speech, force_download=force_download, cache=cache)
+    xml = etree.fromstring(res.content)
+    cache[url] = xml
+    return xml
 
-        if xml is None:
-            return
 
-        p = Passage(speech)
-        p.xml = xml
-        p.buildLineArray()
+def getPassage(speech, force=False):
+    '''Download and parse the text for a speech. Returns a Passage object.
 
-        if nlp == "cltk":
-            if not hasattr(p, 'runCltkPipeline'):
-                raise ImportError(
-                    'getPassage() was called with cltk=True, but the CLTK '
-                    'pipeline is not available. Run `import dicesapi.nlp_cltk` '
-                    'first to enable it.'
-                )
-            p.runCltkPipeline()
+    Reads configuration from speech.api.config (set up by api.initializeCts()).
+    '''
 
-        return p
+    xml = getXML(speech, force=force)
+    if xml is None:
+        return None
+
+    p = Passage(speech)
+    p.xml = xml
+    p._buildLineArray()
+    p._buildLineIndex()
+    return p

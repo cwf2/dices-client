@@ -1,14 +1,14 @@
-'''tests for dicesapi.text: Passage line handling and CtsAPI
+'''tests for dicesapi.text: Passage line handling and module-level retrieval functions
 
 dicesapi.text has no NLP dependencies (see test_module_split.py), so these
 tests only cover CTS retrieval and line/text bookkeeping.
 '''
 
-from unittest.mock import Mock
+from unittest.mock import patch
 
 from lxml import etree
 
-from dicesapi.text import Passage, CtsAPI, squashWhiteSpace
+from dicesapi.text import Passage, getXML, getPassage, squashWhiteSpace, DEFAULT_CTS_PATTERN
 
 
 TEI_PASSAGE = '''
@@ -20,11 +20,27 @@ TEI_PASSAGE = '''
 </TEI>
 '''
 
+TEI_BYTES = TEI_PASSAGE.strip().encode()
 
-def _fake_cts():
-    cts = Mock()
-    cts.xml = etree.fromstring(TEI_PASSAGE)
-    return cts
+
+def _fake_xml():
+    return etree.fromstring(TEI_BYTES)
+
+
+def _fake_response(ok=True):
+    from unittest.mock import Mock
+    res = Mock()
+    res.ok = ok
+    res.content = TEI_BYTES
+    res.status_code = 200 if ok else 404
+    res.reason = 'OK' if ok else 'Not Found'
+    return res
+
+
+def _initialized_api(api):
+    '''Return an api instance with CTS initialized'''
+    api.initializeCts()
+    return api
 
 
 def test_squash_white_space():
@@ -33,19 +49,19 @@ def test_squash_white_space():
 
 def test_build_line_array_strips_notes_and_joins_text():
     passage = Passage()
-    passage.cts = _fake_cts()
-    passage.buildLineArray()
+    passage.xml = _fake_xml()
+    passage._buildLineArray()
 
     assert passage.line_array == [
-        {'n': '1', 'text': 'Some words on this line'},
-        {'n': '2', 'text': 'and a second line of text'},
+        {'n': '1', 'seq': 0, 'text': 'Some words on this line'},
+        {'n': '2', 'seq': 1, 'text': 'and a second line of text'},
     ]
     assert passage.text == 'Some words on this line and a second line of text'
 
 
-def test_build_line_array_noop_without_cts():
+def test_build_line_array_noop_without_xml():
     passage = Passage()
-    passage.buildLineArray()
+    passage._buildLineArray()
 
     assert passage.line_array is None
     assert passage.text is None
@@ -53,8 +69,9 @@ def test_build_line_array_noop_without_cts():
 
 def test_get_line_for_text_position():
     passage = Passage()
-    passage.cts = _fake_cts()
-    passage.buildLineArray()
+    passage.xml = _fake_xml()
+    passage._buildLineArray()
+    passage._buildLineIndex()
 
     # fake a trivial 1-to-1 token index: token i sits at character i
     passage.nlp = list(passage.text)
@@ -67,55 +84,73 @@ def test_get_line_for_text_position():
     assert line == passage.line_array[1]
 
 
-def test_cts_api_get_cts_caches_result(api, speech_data):
+def test_initialize_cts_sets_config(api):
+    api.initializeCts()
+    assert 'cts_pattern' in api.config
+    assert 'cts_cache' in api.config
+    assert api.config['cts_pattern'] == DEFAULT_CTS_PATTERN
+
+
+def test_initialize_cts_custom_pattern(api):
+    api.initializeCts(cts_pattern='https://example.org/{cts_urn}/xml/')
+    assert api.config['cts_pattern'] == 'https://example.org/{cts_urn}/xml/'
+
+
+def test_initialize_cts_does_not_overwrite(api):
+    api.initializeCts(cts_pattern='https://first.example.org/{cts_urn}/xml/')
+    api.initializeCts(cts_pattern='https://second.example.org/{cts_urn}/xml/')
+    assert api.config['cts_pattern'] == 'https://first.example.org/{cts_urn}/xml/'
+
+
+def test_get_xml_caches_result(api, speech_data):
+    _initialized_api(api)
     speech = api.indexedSpeech(speech_data)
 
-    cts_api = CtsAPI(dices_api=api)
-    fake_cts = _fake_cts()
-    cts_api._resolvers[None] = Mock(getTextualNode=Mock(return_value=fake_cts))
+    with patch('dicesapi.text.requests.get', return_value=_fake_response()) as mock_get:
+        first = getXML(speech)
+        second = getXML(speech)
 
-    first = cts_api.getCTS(speech)
-    second = cts_api.getCTS(speech)
-
-    assert first is fake_cts
-    assert second is fake_cts
-    cts_api._resolvers[None].getTextualNode.assert_called_once()
+    assert first is not None
+    assert first is second
+    mock_get.assert_called_once()
 
 
-def test_cts_api_get_cts_returns_none_without_urn(api, speech_data):
+def test_get_xml_returns_none_without_urn(api, speech_data):
+    _initialized_api(api)
     speech_data['work']['urn'] = ''
     speech = api.indexedSpeech(speech_data)
 
-    cts_api = CtsAPI(dices_api=api)
-
-    assert cts_api.getCTS(speech) is None
+    assert getXML(speech) is None
 
 
-def test_cts_api_get_passage_builds_line_array(api, speech_data):
+def test_get_passage_builds_line_array(api, speech_data):
+    _initialized_api(api)
     speech = api.indexedSpeech(speech_data)
 
-    cts_api = CtsAPI(dices_api=api)
-    cts_api._resolvers[None] = Mock(getTextualNode=Mock(return_value=_fake_cts()))
-
-    passage = cts_api.getPassage(speech)
+    with patch('dicesapi.text.requests.get', return_value=_fake_response()):
+        passage = getPassage(speech)
 
     assert isinstance(passage, Passage)
     assert passage.line_array is not None
     assert passage.text.startswith('Some words on this line')
 
 
-def test_get_passage_with_cltk_true_without_nlp_cltk_raises(api, speech_data):
-    '''Requesting the CLTK pipeline without importing dicesapi.nlp_cltk
-    should fail with a clear, actionable error rather than AttributeError.
-    '''
-
+def test_fetch_passage_populates_speech(api, speech_data):
+    _initialized_api(api)
     speech = api.indexedSpeech(speech_data)
 
-    cts_api = CtsAPI(dices_api=api)
-    cts_api._resolvers[None] = Mock(getTextualNode=Mock(return_value=_fake_cts()))
+    with patch('dicesapi.text.requests.get', return_value=_fake_response()):
+        result = speech.fetchPassage()
+
+    assert isinstance(result, Passage)
+    assert speech.passage is result
+
+
+def test_fetch_passage_raises_without_init(api, speech_data):
+    speech = api.indexedSpeech(speech_data)
 
     try:
-        cts_api.getPassage(speech, cltk=True)
-        assert False, 'expected ImportError'
-    except ImportError as e:
-        assert 'nlp_cltk' in str(e)
+        speech.fetchPassage()
+        assert False, 'expected RuntimeError'
+    except RuntimeError as e:
+        assert 'initializeCts' in str(e)

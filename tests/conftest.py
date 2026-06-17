@@ -16,7 +16,6 @@ def api():
 
     return DicesAPI(
         dices_api='http://testserver/api/',
-        cts_api='http://testserver/cts/',
     )
 
 

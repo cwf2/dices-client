@@ -1,7 +1,5 @@
 import requests
 import pandas as pd
-from MyCapytain.resolvers.cts.api import HttpCtsResolver
-from MyCapytain.retrievers.cts5 import HttpCtsRetriever
 import logging
 import csv
 import re
@@ -1346,8 +1344,9 @@ class Speech(object):
         self.level = None
         self.type = None
         self.work = None
+        self.passage = None
         self._attributes = data
-        
+
         if data:
             self._from_data(data)
 
@@ -1534,7 +1533,22 @@ class Speech(object):
         
     def isMultiPrefix(self, sep="."):
         return self.getPrefix("first") != self.getPrefix("last")
-        
+
+
+    def fetchPassage(self, force=False):
+        '''Download the text of this speech from Perseus and store it as self.passage.
+
+        Requires api.initializeCts() to have been called first.
+        Returns the Passage object, which is also stored as self.passage.
+        '''
+        if 'cts_cache' not in self.api.config:
+            raise RuntimeError(
+                "Text retrieval is not initialized. Call api.initializeCts() first."
+            )
+        from dicesapi import text
+        self.passage = text.getPassage(self, force=force)
+        return self.passage
+
 
 class Tag(object):
     '''A speech type tag'''
@@ -1567,7 +1581,6 @@ class DicesAPI(object):
     '''a connection to the DICES API'''
 
     DEFAULT_API = 'http://db.dices.mta.ca/api/'
-    DEFAULT_CTS = 'https://scaife-cts.perseus.org/api/cts'
 
     # Deprecated `logdetail` levels, retained for backward compatibility with
     # code written against earlier versions of dicesapi. New code should
@@ -1589,13 +1602,12 @@ class DicesAPI(object):
     }
 
 
-    def __init__(self, dices_api=DEFAULT_API, cts_api=DEFAULT_CTS, logfile=None,
+    def __init__(self, dices_api=DEFAULT_API, logfile=None,
                     logdetail=None, progress_class=None):
         """Create a connection to the DICES API.
 
         Args:
             dices_api: Base URL of the DICES API.
-            cts_api: Base URL of the CTS API used to retrieve passage text.
             logfile (str): If given, also write log messages to this file.
             logdetail: Deprecated. If given, sets the verbosity of the
                 shared `dicesapi` logger (one of the LOG_* constants).
@@ -1605,12 +1617,11 @@ class DicesAPI(object):
                 `getPagedJSON`.
         """
         self.API = dices_api
-        self.CTS_API = cts_api
+        self.config = {}
         if logdetail is not None:
             logger.setLevel(self._LOGDETAIL_LEVELS.get(logdetail, logging.DEBUG))
         if logfile is not None:
             self.createLog(logfile)
-        self.resolver = HttpCtsResolver(HttpCtsRetriever(self.CTS_API))
         self._ProgressClass = progress_class
         self._work_index = {}
         self._author_index = {}
@@ -1621,6 +1632,34 @@ class DicesAPI(object):
         self._tag_index = {}
         self.version = "DEBUG VERSION 1.0"
         logger.info("Database Initialized")
+
+
+    def initializeCts(self, cts_pattern=None):
+        '''Enable text retrieval via the dicesapi.text module.
+
+        Call this before using Speech.fetchPassage(). Optionally pass a custom
+        URL pattern with a {cts_urn} placeholder to override the default
+        Perseus endpoint.
+        '''
+        from dicesapi import text
+        from dicesapi.text import DEFAULT_CTS_PATTERN
+        self.config.setdefault('cts_pattern', cts_pattern or DEFAULT_CTS_PATTERN)
+        self.config.setdefault('cts_cache', {})
+        logger.info("CTS text retrieval initialized")
+
+
+    def initializeNlp(self, latin_model=None, greek_model=None):
+        '''Enable NLP via the dicesapi.nlp_spacy module.
+
+        Call this before using Passage.runSpacyPipeline(). Optionally pass
+        model names to override the defaults (OdyCy for Greek, LatinCy for
+        Latin).
+        '''
+        import dicesapi.nlp_spacy as nlp_spacy
+        lat = latin_model or nlp_spacy.SPACY_MODEL_LATIN
+        grk = greek_model or nlp_spacy.SPACY_MODEL_GREEK
+        self.config.setdefault('nlp', nlp_spacy.spacy_load(lat, grk))
+        logger.info("NLP initialized")
 
 
     def getPagedJSON(self, endpoint, params=None, progress=False):

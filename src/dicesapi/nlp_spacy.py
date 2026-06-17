@@ -10,51 +10,83 @@ Usage:
 
     import dicesapi.nlp_spacy   # adds Passage.runSpacyPipeline, etc.
 
-    passage = cts_api.getPassage(speech)
-    passage.runSpacyPipeline()
-    for tok in passage.spacy_doc:
+    speech.fetchPassage()
+    speech.passage.runSpacyPipeline()
+    for tok in speech.passage.spacy_doc:
         print(tok.text, tok.pos_)
 '''
 
-import re
 import spacy
 
-from .text import Passage, PUNCT
+from .text import Passage
 
-SPACY_MODEL_GREEK = 'grc_odycy_joint_sm'
+SPACY_MODEL_GREEK = 'grc_odycy_joint_trf'
 SPACY_MODEL_LATIN = 'la_core_web_md'
 
-spacy_nlp = None
+SPACY_MODEL_URLS = {
+    'grc_odycy_joint_sm':  'https://huggingface.co/chcaa/grc_odycy_joint_sm/resolve/main/grc_odycy_joint_sm-any-py3-none-any.whl',
+    'grc_odycy_joint_trf': 'https://huggingface.co/chcaa/grc_odycy_joint_trf/resolve/main/grc_odycy_joint_trf-0.7.0-py3-none-any.whl',
+    'la_core_web_md':      'https://huggingface.co/latincy/la_core_web_md/resolve/main/la_core_web_md-3.9.3-py3-none-any.whl',
+}
+
+
+def _load_model(name):
+    '''Load a single spaCy model by name, with a helpful error if not installed.'''
+    try:
+        return spacy.load(name)
+    except OSError:
+        url = SPACY_MODEL_URLS.get(name)
+        if url:
+            raise OSError(
+                f"spaCy model '{name}' is not installed. Install it with:\n\n"
+                f"    pip install {url}\n\n"
+                f"Then restart your kernel and try again.\n"
+            ) from None
+        raise
+    except ValueError as e:
+        if '[E002]' in str(e):
+            raise RuntimeError(
+                f"spaCy model '{name}' failed to load — a pipeline component "
+                f"was not registered. This usually means the model was installed "
+                f"after the kernel started. Restart your kernel and try again.\n"
+            ) from None
+        raise
 
 
 def spacy_load(latin_model=SPACY_MODEL_LATIN, greek_model=SPACY_MODEL_GREEK):
-    '''Load the spaCy Greek and Latin models
+    '''Load spaCy models and return them as a dict keyed by language.
 
-    Called automatically the first time `runSpacyPipeline` is used, but can
-    also be called explicitly to load different models.
+    Called by DicesAPI.initializeNlp(); not normally called directly.
     '''
-
-    global spacy_nlp
-    spacy_nlp = dict(
-        latin = spacy.load(latin_model),
-        greek = spacy.load(greek_model),
+    try:
+        import latincy_preprocess  # registers LatinCy pipeline components
+    except ImportError:
+        pass
+    try:
+        import spacy_transformers  # registers transformer factory for OdyCy trf
+    except ImportError:
+        pass
+    return dict(
+        latin = _load_model(latin_model),
+        greek = _load_model(greek_model),
     )
 
 
-def runSpacyPipeline(self, index=True, remove=PUNCT):
+def runSpacyPipeline(self, index=True):
     '''Parse text with spaCy, populating self.spacy_doc'''
+
+    if 'nlp' not in self.speech.api.config:
+        raise RuntimeError(
+            "NLP is not initialized. Call api.initializeNlp() first."
+        )
 
     text = self.text
 
     if text is None:
         return
-    if remove is not None:
-        text = re.sub(remove, ' ', self.text).strip()
 
-    if spacy_nlp is None:
-        spacy_load()
-
-    self.spacy_doc = spacy_nlp[self.speech.lang](text)
+    nlp = self.speech.api.config['nlp']
+    self.spacy_doc = nlp[self.speech.lang](text)
     self.nlp = self.spacy_doc
 
     if index:
@@ -62,31 +94,12 @@ def runSpacyPipeline(self, index=True, remove=PUNCT):
 
 
 def buildSpacyTokenIndex(self):
-    '''Create an index linking spacy_doc to line_index'''
+    '''Create an index mapping each spacy_doc token to its char offset in self.text'''
 
     if self.spacy_doc is None:
         return
 
-    self._spacy_token_index = []
-
-    text = self.text
-
-    for w in self.spacy_doc:
-        char_pos = text.find(w.text)
-
-        # bail if string not found
-        if char_pos == -1:
-            self._spacy_token_index.append(None)
-            continue
-
-        # otherwise, record position,
-        # "cross off" matching string
-
-        self._spacy_token_index.append(char_pos)
-        length = len(w.text)
-        text = text[:char_pos] + '🧀'*length + text[char_pos+length:]
-
-    self._token_index = self._spacy_token_index
+    self._token_index = [tok.idx for tok in self.spacy_doc]
 
 
 def getSpacyWordIndex(self, word):

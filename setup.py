@@ -30,7 +30,7 @@ setuptools.setup(
         "pandas",
     ],
     extras_require={
-        "spacy": ["spacy", "click", "spacy-transformers"],
+        "spacy": ["spacy", "click"],
         "dev": ["pytest"],
     },
 )

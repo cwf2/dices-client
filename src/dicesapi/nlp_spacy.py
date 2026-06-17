@@ -20,56 +20,72 @@ import spacy
 
 from .text import Passage
 
-SPACY_MODEL_GREEK = 'grc_odycy_joint_trf'
-SPACY_MODEL_LATIN = 'la_core_web_md'
-
 SPACY_MODEL_URLS = {
     'grc_odycy_joint_sm':  'https://huggingface.co/chcaa/grc_odycy_joint_sm/resolve/main/grc_odycy_joint_sm-any-py3-none-any.whl',
     'grc_odycy_joint_trf': 'https://huggingface.co/chcaa/grc_odycy_joint_trf/resolve/main/grc_odycy_joint_trf-0.7.0-py3-none-any.whl',
     'la_core_web_md':      'https://huggingface.co/latincy/la_core_web_md/resolve/main/la_core_web_md-3.9.3-py3-none-any.whl',
+    'la_core_web_trf':     'https://huggingface.co/latincy/la_core_web_trf/resolve/main/la_core_web_trf-3.9.3-py3-none-any.whl',
 }
 
 
 def _load_model(name):
-    '''Load a single spaCy model by name, with a helpful error if not installed.'''
+    '''Load a single spaCy model by name, returning (model, error_message) tuple.'''
     try:
-        return spacy.load(name)
+        return spacy.load(name), None
     except OSError:
         url = SPACY_MODEL_URLS.get(name)
         if url:
-            raise OSError(
-                f"spaCy model '{name}' is not installed. Install it with:\n\n"
-                f"    pip install {url}\n\n"
-                f"Then restart your kernel and try again.\n"
-            ) from None
-        raise
+            return None, f"    pip install {url}"
+        return None, f"    # no install URL known for '{name}'"
     except ValueError as e:
         if '[E002]' in str(e):
-            raise RuntimeError(
-                f"spaCy model '{name}' failed to load — a pipeline component "
-                f"was not registered. This usually means the model was installed "
-                f"after the kernel started. Restart your kernel and try again.\n"
-            ) from None
+            return None, (
+                f"    # '{name}' was installed after the kernel started —\n"
+                f"    # restart your kernel and try again"
+            )
         raise
 
 
-def spacy_load(latin_model=SPACY_MODEL_LATIN, greek_model=SPACY_MODEL_GREEK):
+def spacy_load(latin_model=None, greek_model=None):
     '''Load spaCy models and return them as a dict keyed by language.
 
     Called by DicesAPI.initializeNlp(); not normally called directly.
+    Pass None for a language to skip loading a model for it.
+    Raises RuntimeError listing any missing models and their install commands.
     '''
+    if latin_model is None and greek_model is None:
+        raise RuntimeError(
+            "No models specified. Pass at least one of latin_model= or "
+            "greek_model= to api.initializeNlp()."
+        )
+
     try:
         import latincy_preprocess  # registers LatinCy pipeline components
     except ImportError:
         pass
     try:
-        import spacy_transformers  # registers transformer factory for OdyCy trf
+        import spacy_transformers  # registers transformer factory for trf models
     except ImportError:
         pass
-    return dict(
-        latin = _load_model(latin_model),
-        greek = _load_model(greek_model),
-    )
+
+    result = {}
+    errors = {}
+
+    if latin_model is not None:
+        result['latin'], errors['latin'] = _load_model(latin_model)
+    if greek_model is not None:
+        result['greek'], errors['greek'] = _load_model(greek_model)
+
+    missing = {lang: msg for lang, msg in errors.items() if msg is not None}
+
+    if missing:
+        lines = ["One or more spaCy models could not be loaded.\n"]
+        lines.append("Run the following in a new cell, then restart your kernel:\n")
+        for msg in missing.values():
+            lines.append(msg)
+        raise RuntimeError("\n".join(lines))
+
+    return result
 
 
 def runSpacyPipeline(self, index=True):
@@ -86,7 +102,13 @@ def runSpacyPipeline(self, index=True):
         return
 
     nlp = self.speech.api.config['nlp']
-    self.spacy_doc = nlp[self.speech.lang](text)
+    lang = self.speech.lang
+    if lang not in nlp:
+        raise RuntimeError(
+            f"No NLP model loaded for {lang}. "
+            f"Pass {lang}_model=... to api.initializeNlp()."
+        )
+    self.spacy_doc = nlp[lang](text)
     self.nlp = self.spacy_doc
 
     if index:

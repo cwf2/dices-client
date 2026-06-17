@@ -1651,14 +1651,12 @@ class DicesAPI(object):
     def initializeNlp(self, latin_model=None, greek_model=None):
         '''Enable NLP via the dicesapi.nlp_spacy module.
 
-        Call this before using Passage.runSpacyPipeline(). Optionally pass
-        model names to override the defaults (OdyCy for Greek, LatinCy for
-        Latin).
+        Call this before using Passage.runSpacyPipeline(). Pass model names
+        for the languages you need; omit a language to skip loading it.
+        At least one model must be specified.
         '''
         import dicesapi.nlp_spacy as nlp_spacy
-        lat = latin_model or nlp_spacy.SPACY_MODEL_LATIN
-        grk = greek_model or nlp_spacy.SPACY_MODEL_GREEK
-        self.config.setdefault('nlp', nlp_spacy.spacy_load(lat, grk))
+        self.config.setdefault('nlp', nlp_spacy.spacy_load(latin_model, greek_model))
         logger.info("NLP initialized")
 
 

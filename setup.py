@@ -31,6 +31,7 @@ setuptools.setup(
     ],
     extras_require={
         "spacy": ["spacy", "click"],
+        "wikidata": ["wikidata"],
         "dev": ["pytest"],
     },
 )

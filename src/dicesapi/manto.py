@@ -1,25 +1,43 @@
 '''manto - tools for interacting with the MANTO database
+
+Uses MANTO's documented public API (api.manto.unh.edu), rather than the
+unofficial resource.manto.unh.edu endpoint this module originally relied
+on circa 2020, when no public API existed. See:
+    https://www.manto-myth.org/blog/releasing-manto-data-into-the-wild
+
+Tie IDs below were confirmed against the API's /model/type/{NGID}
+endpoint, which gives human-readable names for each object_description_id.
+Note: MANTO's schema also defines gender-neutral ties ("Child of", "Parents
+of", "Children of"), but as of 2026-06 these are not populated in the data
+for at least two well-documented characters (Achilles, Telemachos) -- the
+gendered ties (Son of/Daughter of/Mother of/Father of) carry the real data.
 '''
 import requests
+import re
+import time
 import dicesapi
 
 
-MANTO_API = 'https://resource.manto.unh.edu'
+MANTO_API = 'https://api.manto.unh.edu/project/2616'
 NGID = '6580' # nodegoat project number
 DEBUG = True
+
+# courtesy delay before each live request, to avoid hammering MANTO's
+# server when iterating over many characters; doesn't affect cached lookups
+REQUEST_DELAY = 0.2
 
 __manto_index__ = {}
 
 
 class Tie():
     '''Collection of values for MANTO ties'''
-    MOTHER = '31811'
-    FATHER = '27373'
-    WIFE = '31807'
-    HUSBAND = '27374'
-    SON = '31764'
-    DAUGHTER = '31765'
-    PLACE_OF_DEATH = '32529'
+    MOTHER = '31811'    # "Mother of"
+    FATHER = '33623'    # "Father of"
+    WIFE = '31807'       # "Wife of"
+    HUSBAND = '27374'    # "Husband of"
+    SON = '33621'        # "Son of"
+    DAUGHTER = '32763'   # "Daughter of"
+    PLACE_OF_DEATH = '32529'  # "Place of death of"
 
 
 class MantoEntity(object):
@@ -43,10 +61,10 @@ class MantoEntity(object):
         # throw away a couple outer layers, save everything else
         self.data = data.get('data', {}).get('objects', {}).get(self.id, {})
 
-        # set name
+        # set name, stripping HTML markup MANTO embeds in object_name
         self.name = self.data.get('object', {}).get('object_name')
         if self.name is not None:
-            self.name = self.name.strip()
+            self.name = re.sub(r'<[^>]+>', '', self.name).strip()
         
     def force_download(self, api=MANTO_API, debug=DEBUG):
         '''Re-download data from MANTO and overwrite existing attributes'''
@@ -98,6 +116,9 @@ def dlMantoData(manto_id, api=MANTO_API, debug=DEBUG):
     # this is the trick to getting JSON data from MANTO's API
     headers = {'Accept': 'application/json'}
 
+    # brief courtesy delay before each live request
+    time.sleep(REQUEST_DELAY)
+
     # make request
     res = requests.get(f'{api}/{manto_id}', headers=headers)
 
@@ -112,7 +133,7 @@ def dlMantoData(manto_id, api=MANTO_API, debug=DEBUG):
         return data
     else:
         if debug:
-            print(f'Failed to retrieve MANTO id {manto_id}: HTTP status: {res.status}')
+            print(f'Failed to retrieve MANTO id {manto_id}: HTTP status: {res.status_code}')
 
 
 def getMantoID(manto_id, cache_empty=False):
@@ -176,6 +197,6 @@ def charTiedIDs(char, ties, debug=DEBUG):
     manto_ent = getMantoChar(char)
     
     if manto_ent is not None:
-        return manto_ent.getTies(ties, as_objects=False)
+        return manto_ent.getTies(ties, as_ent=False)
     else:
         return []

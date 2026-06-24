@@ -345,6 +345,11 @@ class AuthorGroup(DataGroup):
         return self.pluck('id')
 
 
+    def getPublicIds(self):
+        '''Returns a list of author public IDs'''
+        return self.pluck('public_id')
+
+
     def getNames(self):
         '''Return a list of the authors names'''
         return self.pluck('name')
@@ -388,6 +393,20 @@ class AuthorGroup(DataGroup):
         return self.filterBy('id', ids, incl_none)
 
 
+    def filterPublicIds(self, public_ids, incl_none=False):
+        """Filter the authors by public ID
+
+        Args:
+            public_ids (list): Author public IDs to match
+            incl_none (bool): Include None values in the list of public IDs
+
+        Returns:
+            A new AuthorGroup
+        """
+
+        return self.filterBy('public_id', public_ids, incl_none)
+
+
     def filterWDs(self, wds, incl_none=False):
         """Filter the authors by WikiData ID
 
@@ -423,6 +442,7 @@ class Author(object):
         self.api = api
         self.index = (api is not None and index is not None)
         self.id = None
+        self.public_id = None
         self.name = None
         self.wd = None
         self.urn = None
@@ -432,7 +452,7 @@ class Author(object):
             self._from_data(data)
 
     def __repr__(self):
-        return f'<Author {self.id}: {self.name}>'
+        return f'<Author {self.public_id}: {self.name}>'
 
     
     def __lt__(self, other):
@@ -448,7 +468,7 @@ class Author(object):
     def _from_data(self, data):
         '''populate attributes from data dict'''
 
-        _assign_fields(self, data, ['id', 'name', 'wd', 'urn'])
+        _assign_fields(self, data, ['id', 'public_id', 'name', 'wd', 'urn'])
 
 
 class WorkGroup(DataGroup):
@@ -457,6 +477,11 @@ class WorkGroup(DataGroup):
     def getIDs(self):
         '''Returns a list of work IDs'''
         return self.pluck('id')
+
+
+    def getPublicIds(self):
+        '''Returns a list of work public IDs'''
+        return self.pluck('public_id')
 
 
     def getTitles(self):
@@ -499,6 +524,20 @@ class WorkGroup(DataGroup):
         """
 
         return self.filterBy('id', ids, incl_none)
+
+
+    def filterPublicIds(self, public_ids, incl_none=False):
+        """Filter the works by public ID
+
+        Args:
+            public_ids (list): List of work public IDs to match
+            incl_none (bool): Include None values in the list
+
+        Returns:
+            A new WorkGroup
+        """
+
+        return self.filterBy('public_id', public_ids, incl_none)
 
 
     def filterTitles(self, titles, incl_none=False):
@@ -578,6 +617,7 @@ class Work(object):
         self.api = api
         self.index = (api is not None and index is not None)
         self.id = None
+        self.public_id = None
         self.title = None
         self.wd = None
         self.urn = None
@@ -587,9 +627,9 @@ class Work(object):
 
         if data:
             self._from_data(data)
-    
+
     def __repr__(self):
-        return f'<Work {self.id}: {self.title}>'
+        return f'<Work {self.public_id}: {self.title}>'
     
 
     def __lt__(self, other):
@@ -607,7 +647,7 @@ class Work(object):
     def _from_data(self, data):
         '''populate attributes from data dict'''
 
-        _assign_fields(self, data, ['id', 'title', 'wd', 'urn', 'lang'])
+        _assign_fields(self, data, ['id', 'public_id', 'title', 'wd', 'urn', 'lang'])
 
         if 'author' in data:
             if self.index:
@@ -625,6 +665,11 @@ class CharacterGroup(DataGroup):
     def getIDs(self):
         '''Returns a list of character IDs'''
         return self.pluck('id')
+
+
+    def getPublicIds(self):
+        '''Returns a list of character public IDs'''
+        return self.pluck('public_id')
 
 
     def getNames(self):
@@ -669,6 +714,20 @@ class CharacterGroup(DataGroup):
         """
 
         return self.filterBy('id', ids, incl_none)
+
+
+    def filterPublicIds(self, public_ids, incl_none=False):
+        """Filter characters by public ID
+
+        Args:
+            public_ids (list): list of public IDs to match
+            incl_none (bool): Include None values in the list.
+
+        Returns:
+            A new CharacterGroup
+        """
+
+        return self.filterBy('public_id', public_ids, incl_none)
 
 
     def filterNames(self, names, incl_none=False):
@@ -762,6 +821,7 @@ class Character(object):
         self.api = api
         self.index = (api is not None and index is not None)        
         self.id = None
+        self.public_id = None
         self.name = None
         self.being = None
         self.number = None
@@ -770,13 +830,13 @@ class Character(object):
         self.manto = None
         self.tt = None
         self._attributes = data
-        
+
         if data:
             self._from_data(data)
 
 
     def __repr__(self):
-        return f'<Character {self.id}: {self.name}>'
+        return f'<Character {self.public_id}: {self.name}>'
 
     
     def __lt__(self, other):
@@ -792,7 +852,7 @@ class Character(object):
     def _from_data(self, data):
         '''populate attributes from data'''
 
-        _assign_fields(self, data, ['id', 'name', 'being', 'number', 'gender', 'wd', 'manto', 'tt'])
+        _assign_fields(self, data, ['id', 'public_id', 'name', 'being', 'number', 'gender', 'wd', 'manto', 'tt'])
 
 
 class CharacterInstanceGroup(DataGroup):
@@ -803,6 +863,11 @@ class CharacterInstanceGroup(DataGroup):
     def getIDs(self):
         '''Returns a list of character instance ID's'''
         return self.pluck('id')
+
+
+    def getPublicIds(self):
+        '''Returns a list of character instance public IDs'''
+        return self.pluck('public_id')
 
 
     def getContexts(self):
@@ -860,6 +925,20 @@ class CharacterInstanceGroup(DataGroup):
         """
 
         return self.filterBy('id', ids, incl_none)
+
+
+    def filterPublicIds(self, public_ids, incl_none=False):
+        """Filter character instances by `public_id` attribute
+
+        Args:
+            public_ids (list): List of allowed `public_id` values
+            incl_none (bool): Include None values in the results
+
+        Returns:
+            A new CharacterInstanceGroup
+        """
+
+        return self.filterBy('public_id', public_ids, incl_none)
 
 
     def filterContexts(self, contexts, incl_none=False):
@@ -953,6 +1032,7 @@ class CharacterInstance(object):
         self.api = api
         self.index = (api is not None and index is not None)        
         self.id = None
+        self.public_id = None
         self.name = None
         self.context = None
         self.char = None
@@ -982,13 +1062,13 @@ class CharacterInstance(object):
         name = self.name
         if self.char is not None and self.char.name != self.char.name:
             name = f'{self.name}/{self.char.name}'
-        return f'<CharacterInstance {self.id}: {name}>'
+        return f'<CharacterInstance {self.public_id}: {name}>'
 
 
     def _from_data(self, data):
         '''populate attributes from data'''
 
-        _assign_fields(self, data, ['id', 'context', 'anon', 'name', 'being', 'number', 'gender'])
+        _assign_fields(self, data, ['id', 'public_id', 'context', 'anon', 'name', 'being', 'number', 'gender'])
 
         if 'char' in data and data['char'] is not None:
             if self.index:
@@ -1027,6 +1107,11 @@ class SpeechClusterGroup(DataGroup):
         return self.pluck('id')
 
 
+    def getPublicIds(self):
+        '''Returns a list of Speech Cluster public IDs'''
+        return self.pluck('public_id')
+
+
     def filterIDs(self, ids, incl_none=False):
         """Filter speech clusters by ID
 
@@ -1041,6 +1126,20 @@ class SpeechClusterGroup(DataGroup):
         return self.filterBy('id', ids, incl_none)
 
 
+    def filterPublicIds(self, public_ids, incl_none=False):
+        """Filter speech clusters by public ID
+
+        Args:
+            public_ids: List of allowed public IDs
+            incl_none (bool): Include None values in the results
+
+        Returns:
+            A new SpeechClusterGroup
+        """
+
+        return self.filterBy('public_id', public_ids, incl_none)
+
+
 class SpeechCluster(object):
     '''A speech cluster'''
     
@@ -1048,6 +1147,7 @@ class SpeechCluster(object):
         self.api = api
         self.index = (api is not None and index is not None)        
         self.id = None
+        self.public_id = None
         self.type = None
         self._attributes = data
         self._first = None
@@ -1068,13 +1168,13 @@ class SpeechCluster(object):
     def __repr__(self):
         incipit = self.getFirstSpeech()
         loc = f'{incipit.work.title} {incipit.l_fi} ff.'
-        return f'<SpeechCluster {self.id}: {loc}>'
+        return f'<SpeechCluster {self.public_id}: {loc}>'
 
 
     def _from_data(self, data):
         '''populate attributes from data'''
 
-        _assign_fields(self, data, ['id', 'type'])
+        _assign_fields(self, data, ['id', 'public_id', 'type'])
 
         if 'speeches' in data:
             if isinstance(data['speeches'], list):
@@ -1145,6 +1245,11 @@ class SpeechGroup(DataGroup):
     def getIDs(self):
         '''Returns a list of Speech IDs'''
         return self.pluck('id')
+
+
+    def getPublicIds(self):
+        '''Returns a list of Speech public IDs'''
+        return self.pluck('public_id')
 
 
     def getClusters(self, flatten=False):
@@ -1242,6 +1347,12 @@ class SpeechGroup(DataGroup):
         return self.filterBy('id', ids, incl_none)
 
 
+    def filterPublicIds(self, public_ids, incl_none=False):
+        '''Filter on the Speech public IDs'''
+
+        return self.filterBy('public_id', public_ids, incl_none)
+
+
     def filterClusters(self, clusters, incl_none=False):
         '''Filter on the Speech Cluster's'''
 
@@ -1335,6 +1446,7 @@ class Speech(object):
         self.api = api
         self.index = (api is not None and index is not None)
         self.id = None
+        self.public_id = None
         self.cluster = None
         self.seq = None
         self.l_fi = None
@@ -1355,7 +1467,7 @@ class Speech(object):
     def _from_data(self, data):
         '''populate attributes from dict'''
 
-        _assign_fields(self, data, ['id', 'seq', 'l_fi', 'l_la', 'part', 'level', 'type'])
+        _assign_fields(self, data, ['id', 'public_id', 'seq', 'l_fi', 'l_la', 'part', 'level', 'type'])
 
         if 'cluster' in data:
             if self.index:
@@ -1384,7 +1496,7 @@ class Speech(object):
 
 
     def __repr__(self):
-        return f'<Speech {self.id}: {self.work.title} {self.l_range}>'
+        return f'<Speech {self.public_id}: {self.work.title} {self.l_range}>'
        
         
     def __lt__(self, other):

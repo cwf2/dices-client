@@ -3,6 +3,7 @@ import pandas as pd
 import logging
 import csv
 import re
+from urllib.parse import urlparse
 
 # Module logger. Following standard library practice, this module does not
 # configure any handlers of its own -- by default, messages simply go
@@ -1710,6 +1711,118 @@ class DicesAPI(object):
         return results
 
 
+    def getSchema(self, force=False):
+        '''Retrieve (and cache) the API's OpenAPI schema.
+
+        The schema is generated live by the server from its current filter
+        and serializer definitions, so it reflects exactly what's
+        searchable right now. Used internally by `getSearchFields()`; most
+        users won't need to call this directly.
+
+        Args:
+            force (bool): If True, re-download even if already cached.
+        '''
+        if force or 'schema' not in self.config:
+            api = self.API.rstrip('/')
+            res = requests.get(f'{api}/schema/', headers={'Accept': 'application/json'})
+            res.raise_for_status()
+            self.config['schema'] = res.json()
+        return self.config['schema']
+
+
+    def getSearchFields(self, endpoint):
+        '''Retrieve the set of query parameters available for a list endpoint.
+
+        Queries the API's live OpenAPI schema, so the result always
+        reflects what the server currently supports -- e.g.:
+
+            >>> api.getSearchFields('speeches')
+            {'spkr_name': {'type': 'string', 'choices': None},
+             'spkr_gender': {'type': 'string', 'choices':
+                {'male': 'Male', 'female': 'Female', ...}},
+             ...}
+
+        Args:
+            endpoint (str): One of the API's list endpoints, e.g.
+                'speeches', 'clusters', 'authors', 'works', 'characters',
+                'instances'.
+
+        Returns:
+            dict: Maps each query parameter name to a dict with keys
+            'type' (the parameter's JSON type) and 'choices' (a dict of
+            {value: human-readable label} for choice fields, or None).
+        '''
+        schema = self.getSchema()
+        api_path = urlparse(self.API).path.rstrip('/')
+        path_key = f"{api_path}/{endpoint.strip('/')}/"
+
+        try:
+            params = schema['paths'][path_key]['get']['parameters']
+        except KeyError:
+            available = sorted(
+                p[len(api_path):].strip('/')
+                for p in schema['paths']
+                if p.startswith(api_path) and p.endswith('/') and '{' not in p
+            )
+            available = [name for name in available if name and name != 'schema']
+            raise ValueError(
+                f"No such endpoint '{endpoint}'. Available endpoints: "
+                f"{', '.join(available)}"
+            )
+
+        fields = {}
+        for param in params:
+            if param.get('in') != 'query':
+                continue
+            field_schema = param.get('schema', {})
+            choices = None
+            if 'enum' in field_schema:
+                choices = self._parseChoiceDescription(
+                    param.get('description', ''), field_schema['enum'])
+            fields[param['name']] = {
+                'type': field_schema.get('type'),
+                'choices': choices,
+            }
+        return fields
+
+
+    @staticmethod
+    def _parseChoiceDescription(description, enum_values):
+        '''Parse drf-spectacular's "* `value` - Label" description into a dict'''
+
+        choices = {}
+        for line in description.splitlines():
+            match = re.match(r'\*\s*`([^`]+)`\s*-\s*(.+)', line.strip())
+            if match:
+                choices[match.group(1)] = match.group(2)
+
+        # fall back to the raw value if a label couldn't be parsed
+        for value in enum_values:
+            choices.setdefault(value, value)
+
+        return choices
+
+
+    def printSearchFields(self, endpoint):
+        '''Print a human-readable summary of an endpoint's search fields.
+
+        Convenience wrapper around `getSearchFields()` for interactive use,
+        e.g. in a notebook:
+
+            >>> api.printSearchFields('speeches')
+            spkr_name (string)
+            spkr_gender (string): male=Male, female=Female, x=Mixed/non-binary, none=Unknown/not-applicable
+            ...
+        '''
+        fields = self.getSearchFields(endpoint)
+        for name, info in sorted(fields.items()):
+            line = f"{name} ({info['type']})"
+            if info['choices']:
+                choice_str = ', '.join(f'{k}={v}' for k, v in info['choices'].items())
+                line += f": {choice_str}"
+            print(line)
+
+
     def createLog(self, logfile):
         """Add a file handler so log messages are also written to `logfile`.
 
@@ -1724,7 +1837,12 @@ class DicesAPI(object):
 
 
     def getSpeeches(self, progress=False, **kwargs):
-        '''Retrieve speeches from API'''
+        '''Retrieve speeches from API.
+
+        Accepts any search parameter supported by the API's 'speeches'
+        endpoint as a keyword argument. To see what's available, call
+        api.printSearchFields('speeches').
+        '''
 
         logger.debug("Attempting to fetch a SpeechGroup")
         # get the results from the speeches endpoint
@@ -1739,7 +1857,12 @@ class DicesAPI(object):
 
 
     def getClusters(self, progress=False, **kwargs):
-        '''Retrieve speech clusters from API'''
+        '''Retrieve speech clusters from API.
+
+        Accepts any search parameter supported by the API's 'clusters'
+        endpoint as a keyword argument. To see what's available, call
+        api.printSearchFields('clusters').
+        '''
 
         logger.debug("Attempting to fetch a ClusterGroup")
                 
@@ -1754,7 +1877,12 @@ class DicesAPI(object):
 
     
     def getCharacters(self, progress=False, **kwargs):
-        '''Retrieve characters from API'''
+        '''Retrieve characters from API.
+
+        Accepts any search parameter supported by the API's 'characters'
+        endpoint as a keyword argument. To see what's available, call
+        api.printSearchFields('characters').
+        '''
 
         logger.debug("Attempting to fetch a CharactersGroup")
         
@@ -1769,7 +1897,12 @@ class DicesAPI(object):
 
 
     def getWorks(self, progress=False, **kwargs):
-        '''Fetch works from the API'''
+        '''Fetch works from the API.
+
+        Accepts any search parameter supported by the API's 'works'
+        endpoint as a keyword argument. To see what's available, call
+        api.printSearchFields('works').
+        '''
 
         logger.debug("Attempting to fetch a WorksGroup")
         
@@ -1781,7 +1914,12 @@ class DicesAPI(object):
 
 
     def getAuthors(self, progress=False, **kwargs):
-        '''Fetch authors from the API'''
+        '''Fetch authors from the API.
+
+        Accepts any search parameter supported by the API's 'authors'
+        endpoint as a keyword argument. To see what's available, call
+        api.printSearchFields('authors').
+        '''
 
         logger.debug("Attempting to fetch a AuthorGroup")
 
@@ -1793,7 +1931,12 @@ class DicesAPI(object):
 
 
     def getInstances(self, progress=False, **kwargs):
-        '''Fetch character instances from the API'''
+        '''Fetch character instances from the API.
+
+        Accepts any search parameter supported by the API's 'instances'
+        endpoint as a keyword argument. To see what's available, call
+        api.printSearchFields('instances').
+        '''
 
         logger.debug("Attempting to fetch a CharacterInstanceGroup")
         results = self.getPagedJSON('instances', dict(**kwargs), progress=progress)

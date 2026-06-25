@@ -1041,6 +1041,7 @@ class CharacterInstance(object):
         self.being = None
         self.gender = None
         self.anon = None
+        self.changed = None
         self._attributes = data
 
         if data:
@@ -1068,7 +1069,7 @@ class CharacterInstance(object):
     def _from_data(self, data):
         '''populate attributes from data'''
 
-        _assign_fields(self, data, ['id', 'public_id', 'context', 'anon', 'name', 'being', 'number', 'gender'])
+        _assign_fields(self, data, ['id', 'public_id', 'context', 'anon', 'name', 'being', 'number', 'gender', 'changed'])
 
         if 'char' in data and data['char'] is not None:
             if self.index:

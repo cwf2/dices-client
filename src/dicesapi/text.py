@@ -59,6 +59,8 @@ PERSEUS_ADJUSTMENTS = {
     "urn:cts:latinLit:stoa0238.stoa002.perseus-lat2": [(r"(.+)", r"1.\1")],
 
     # Changes due to differences between editions
+    # Nonnus Dion. - line 48.291 is out of order; use 48.292 as speech start
+    "urn:cts:greekLit:tlg2045.tlg001.perseus-grc2": [(r"48\.291", r"48.292")],
     # A.R. Argon. - line 3.739 doesn't exist
     "urn:cts:greekLit:tlg0001.tlg001.perseus-grc2": [(r"3\.739", r"3.738")],
     # Hom. Od. - line 10.456 doesn't exist

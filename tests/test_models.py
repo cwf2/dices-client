@@ -9,7 +9,7 @@ def test_author_from_data(api, author_data):
     assert author.id == 1
     assert author.name == 'Homer'
     assert author.wd == 'Q6691'
-    assert repr(author) == '<Author 1: Homer>'
+    assert repr(author) == '<Author AB12: Homer>'
 
 
 def test_work_from_data_indexes_author(api, work_data):
@@ -62,7 +62,7 @@ def test_speech_from_data(api, speech_data):
     assert speech.getSpkrString() == 'Achilles'
     assert speech.getAddrString() == 'Agamemnon'
 
-    assert repr(speech) == '<Speech 1: Iliad 1.1-1.7>'
+    assert repr(speech) == '<Speech CD34: Iliad 1.1-1.7>'
 
 
 def test_speech_indexing_recycles_objects(api, speech_data):

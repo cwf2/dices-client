@@ -23,6 +23,7 @@ def api():
 def author_data():
     return {
         'id': 1,
+        'public_id': 'AB12',
         'name': 'Homer',
         'wd': 'Q6691',
         'urn': 'urn:cts:greekLit:tlg0012',
@@ -99,6 +100,7 @@ def speech_data(work_data, character_instance_data):
     spkr, addr = character_instance_data
     return {
         'id': 1,
+        'public_id': 'CD34',
         'cluster': {'id': 1, 'type': 'D'},
         'work': dict(work_data),
         'seq': 1,

@@ -1694,7 +1694,7 @@ class Tag(object):
 class DicesAPI(object):
     '''a connection to the DICES API'''
 
-    DEFAULT_API = 'http://db.dices.mta.ca/api/'
+    DEFAULT_API = 'https://db.dices.mta.ca/api/'
 
     # Deprecated `logdetail` levels, retained for backward compatibility with
     # code written against earlier versions of dicesapi. New code should
